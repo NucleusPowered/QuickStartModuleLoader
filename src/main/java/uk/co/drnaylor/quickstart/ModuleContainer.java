@@ -15,6 +15,11 @@ import uk.co.drnaylor.quickstart.constructors.ModuleConstructor;
 import uk.co.drnaylor.quickstart.constructors.SimpleModuleConstructor;
 import uk.co.drnaylor.quickstart.enums.ConstructionPhase;
 import uk.co.drnaylor.quickstart.enums.LoadingStatus;
+import uk.co.drnaylor.quickstart.enums.ModulePhase;
+import uk.co.drnaylor.quickstart.exceptions.NoModuleException;
+import uk.co.drnaylor.quickstart.exceptions.QuickStartModuleDiscoveryException;
+import uk.co.drnaylor.quickstart.exceptions.QuickStartModuleLoaderException;
+import uk.co.drnaylor.quickstart.exceptions.UndisableableModuleException;
 
 import java.io.IOException;
 import java.text.MessageFormat;
@@ -82,7 +87,7 @@ public final class ModuleContainer {
         } else {
             String id = s.getName().toLowerCase();
             Logger.getLogger("QuickStart Module Loader").warning(MessageFormat.format("The module {0} does not have a ModuleData annotation associated with it. We're just assuming an ID of {0}.", id));
-            discoveredModules.put(id, new ModuleSpec(s, id, LoadingStatus.ENABLED));
+            discoveredModules.put(id, new ModuleSpec(s, id, LoadingStatus.ENABLED, false));
         }
     };
 
@@ -92,19 +97,26 @@ public final class ModuleContainer {
      * @param configurationLoader The {@link ConfigurationLoader} that contains details of whether the modules should be enabled or not.
      * @param loader The {@link ClassLoader} that contains the classpath in which the modules are located.
      * @param packageBase The root name of the package to scan for modules.
+     *
+     * @throws QuickStartModuleDiscoveryException if there is an error starting the Module Container.
      */
-    private ModuleContainer(ConfigurationLoader<? extends ConfigurationNode> configurationLoader, ClassLoader loader, String packageBase, ModuleConstructor constructor) throws IOException {
-        Preconditions.checkNotNull(configurationLoader);
-        Preconditions.checkNotNull(loader);
-        Preconditions.checkNotNull(packageBase);
-        Preconditions.checkNotNull(constructor);
+    private ModuleContainer(ConfigurationLoader<? extends ConfigurationNode> configurationLoader, ClassLoader loader, String packageBase, ModuleConstructor constructor) throws QuickStartModuleDiscoveryException {
 
-        this.config = new SystemConfig<>(configurationLoader);
-        this.constructor = constructor;
-        this.classLoader = loader;
-        this.packageLocation = packageBase;
+        try {
+            Preconditions.checkNotNull(configurationLoader);
+            Preconditions.checkNotNull(loader);
+            Preconditions.checkNotNull(packageBase);
+            Preconditions.checkNotNull(constructor);
 
-        discoverModules();
+            this.config = new SystemConfig<>(configurationLoader);
+            this.constructor = constructor;
+            this.classLoader = loader;
+            this.packageLocation = packageBase;
+
+            discoverModules();
+        } catch (Exception e) {
+            throw new QuickStartModuleDiscoveryException("Unable to start QuickStart", e);
+        }
     }
 
     /**
@@ -122,18 +134,73 @@ public final class ModuleContainer {
         modules.forEach(modulePopulator);
 
         // Modules discovered. Create the Module Config adapter.
-        Map<String, LoadingStatus> m = discoveredModules.entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey, v -> v.getValue().getStatus()));
+        Map<String, LoadingStatus> m = discoveredModules.entrySet().stream().filter(x -> !x.getValue().isMandatory())
+                .collect(Collectors.toMap(Map.Entry::getKey, v -> v.getValue().getStatus()));
         config.attachConfigAdapter(ModulesConfigAdapter.modulesKey, new ModulesConfigAdapter<>(m));
 
         currentPhase = ConstructionPhase.DISCOVERED;
     }
 
     /**
+     * Gets the current phase of the module loader.
+     *
+     * @return The {@link ConstructionPhase}
+     */
+    public ConstructionPhase getCurrentPhase() {
+        return currentPhase;
+    }
+
+    /**
+     * Gets a set of IDs of modules that are going to be loaded.
+     *
+     * @return The modules that are going to be loaded.
+     */
+    public Set<String> getModules() {
+        return getModules(true);
+    }
+
+    /**
+     * Gets a set of IDs of modules.
+     *
+     * @param enabledOnly If <code>true</code>, only return modules that are going to be loaded.
+     * @return The modules.
+     */
+    public Set<String> getModules(final boolean enabledOnly) {
+        Preconditions.checkArgument(currentPhase != ConstructionPhase.INITALISED && currentPhase != ConstructionPhase.DISCOVERING);
+        return discoveredModules.entrySet().stream().filter(k -> enabledOnly || k.getValue().getStatus() != LoadingStatus.DISABLED)
+                .map(Map.Entry::getKey).collect(Collectors.toSet());
+    }
+
+    /**
+     * Requests that a module be disabled. This can only be run during the {@link ConstructionPhase#DISCOVERED} phase.
+     *
+     * @param moduleName The ID of the module.
+     */
+    public void disableModule(String moduleName) throws UndisableableModuleException, NoModuleException {
+        Preconditions.checkArgument(currentPhase == ConstructionPhase.DISCOVERED);
+
+        ModuleSpec ms = discoveredModules.get(moduleName.toLowerCase());
+        if (ms == null) {
+            // No module
+            throw new NoModuleException(moduleName);
+        }
+
+        // TODO: Get this from the config file actually.
+        if (ms.isMandatory() || ms.getStatus() == LoadingStatus.FORCELOAD) {
+            throw new UndisableableModuleException(moduleName);
+        }
+
+        ms.setPhase(ModulePhase.DISABLED);
+    }
+
+    /**
      * Starts the module enabling phase.
      */
-    public void startModuleConstruction() {
+    public void startModuleConstruction() throws QuickStartModuleLoaderException.Construction, QuickStartModuleLoaderException.Enabling {
         Preconditions.checkArgument(currentPhase == ConstructionPhase.DISCOVERED);
         currentPhase = ConstructionPhase.ENABLING;
+
+
     }
 
     /**
@@ -195,9 +262,9 @@ public final class ModuleContainer {
          * Builds a {@link ModuleContainer}.
          *
          * @return The {@link ModuleContainer}.
-         * @throws IOException if the configuration loader cannot load data from the file.
+         * @throws QuickStartModuleDiscoveryException if the configuration loader cannot load data from the file.
          */
-        public ModuleContainer build() throws IOException {
+        public ModuleContainer build() throws QuickStartModuleDiscoveryException {
             Preconditions.checkNotNull(packageToScan);
             Preconditions.checkNotNull(configurationLoader);
 

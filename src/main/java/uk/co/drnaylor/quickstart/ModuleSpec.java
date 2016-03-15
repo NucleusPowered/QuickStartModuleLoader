@@ -13,13 +13,14 @@ final class ModuleSpec {
     private final Class<? extends Module> moduleClass;
     private final String name;
     private final LoadingStatus status;
+    private final boolean isMandatory;
     private ModulePhase phase = ModulePhase.DISCOVERED;
 
     ModuleSpec(Class<? extends Module> moduleClass, ModuleData data) {
-        this(moduleClass, data.name(), data.status());
+        this(moduleClass, data.name(), data.status(), data.isRequired());
     }
 
-    ModuleSpec(Class<? extends Module> moduleClass, String name, LoadingStatus status) {
+    ModuleSpec(Class<? extends Module> moduleClass, String name, LoadingStatus status, boolean isMandatory) {
         Preconditions.checkNotNull(moduleClass);
         Preconditions.checkNotNull(name);
         Preconditions.checkNotNull(status);
@@ -27,6 +28,7 @@ final class ModuleSpec {
         this.moduleClass = moduleClass;
         this.name = name;
         this.status = status;
+        this.isMandatory = isMandatory;
     }
 
     /**
@@ -54,6 +56,16 @@ final class ModuleSpec {
      */
     public LoadingStatus getStatus() {
         return status;
+    }
+
+    /**
+     * Gets whether the module is mandatory. This is equivalent to {@link LoadingStatus#FORCELOAD}, but it cannot be
+     * changed via a config file.
+     *
+     * @return <code>true</code> if the module cannot be turned off.
+     */
+    public boolean isMandatory() {
+        return isMandatory;
     }
 
     /**

@@ -35,16 +35,6 @@ public abstract class QuickStartModuleLoaderException extends Exception {
     }
 
     /**
-     * Failure during Module Discovery
-     */
-    public static class Discovery extends QuickStartModuleLoaderException {
-
-        public Discovery(Class<? extends Module> module, String message, Exception innerException) {
-            super(module, message, innerException);
-        }
-    }
-
-    /**
      * Failure during Module Enabling
      */
     public static class Enabling extends QuickStartModuleLoaderException {

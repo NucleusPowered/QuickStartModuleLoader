@@ -23,6 +23,8 @@ import java.util.Map;
 public final class ModulesConfigAdapter<T extends ConfigurationLoader<ConfigurationNode>>
         extends AbstractConfigAdapter<ConfigurationNode, T, Map<String, LoadingStatus>> {
 
+    public static final String modulesKey = "modules";
+
     private final Map<String, LoadingStatus> defaults;
 
     public ModulesConfigAdapter(Map<String, LoadingStatus> defaults) {

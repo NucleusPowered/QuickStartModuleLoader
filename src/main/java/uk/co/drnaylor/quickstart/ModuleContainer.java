@@ -6,15 +6,23 @@ package uk.co.drnaylor.quickstart;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Maps;
+import com.google.common.reflect.ClassPath;
 import ninja.leaping.configurate.ConfigurationNode;
 import ninja.leaping.configurate.loader.ConfigurationLoader;
+import uk.co.drnaylor.quickstart.annotations.ModuleData;
+import uk.co.drnaylor.quickstart.config.ModulesConfigAdapter;
 import uk.co.drnaylor.quickstart.constructors.ModuleConstructor;
 import uk.co.drnaylor.quickstart.constructors.SimpleModuleConstructor;
 import uk.co.drnaylor.quickstart.enums.ConstructionPhase;
-import uk.co.drnaylor.quickstart.enums.ModulePhase;
+import uk.co.drnaylor.quickstart.enums.LoadingStatus;
 
 import java.io.IOException;
+import java.text.MessageFormat;
 import java.util.Map;
+import java.util.Set;
+import java.util.function.Consumer;
+import java.util.logging.Logger;
+import java.util.stream.Collectors;
 
 /**
  * The ModuleContainer contains all modules for a particular modular system. It scans the provided {@link ClassLoader}
@@ -54,7 +62,7 @@ public final class ModuleContainer {
     /**
      * The modules that have been discovered by the container.
      */
-    private final Map<Module, ModulePhase> discoveredModules = Maps.newHashMap();
+    private final Map<String, ModuleSpec> discoveredModules = Maps.newHashMap();
 
     /**
      * Contains the main configuration file.
@@ -65,6 +73,18 @@ public final class ModuleContainer {
      * Provides the methods to use to construct the module.
      */
     private final ModuleConstructor constructor;
+
+    private final Consumer<Class<? extends Module>> modulePopulator = s -> {
+        // If we have a module annotation, we are golden.
+        if (s.isAnnotationPresent(ModuleData.class)) {
+            ModuleData md = s.getAnnotation(ModuleData.class);
+            discoveredModules.put(md.id().toLowerCase(), new ModuleSpec(s, md));
+        } else {
+            String id = s.getName().toLowerCase();
+            Logger.getLogger("QuickStart Module Loader").warning(MessageFormat.format("The module {0} does not have a ModuleData annotation associated with it. We're just assuming an ID of {0}.", id));
+            discoveredModules.put(id, new ModuleSpec(s, id, LoadingStatus.ENABLED));
+        }
+    };
 
     /**
      * Constructs a {@link ModuleContainer} and starts discovery of the modules.
@@ -83,6 +103,37 @@ public final class ModuleContainer {
         this.constructor = constructor;
         this.classLoader = loader;
         this.packageLocation = packageBase;
+
+        discoverModules();
+    }
+
+    /**
+     * Starts discovery of modules.
+     */
+    private void discoverModules() throws IOException {
+        Preconditions.checkArgument(currentPhase == ConstructionPhase.INITALISED);
+        currentPhase = ConstructionPhase.DISCOVERING;
+
+        // Get the modules out.
+        Set<ClassPath.ClassInfo> ci = ClassPath.from(classLoader).getTopLevelClassesRecursive(packageLocation);
+        Set<Class<? extends Module>> modules = ci.stream().map(ClassPath.ClassInfo::load).map(x -> x.asSubclass(Module.class)).collect(Collectors.toSet());
+
+        // Put the modules into the discoverer.
+        modules.forEach(modulePopulator);
+
+        // Modules discovered. Create the Module Config adapter.
+        Map<String, LoadingStatus> m = discoveredModules.entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey, v -> v.getValue().getStatus()));
+        config.attachConfigAdapter(ModulesConfigAdapter.modulesKey, new ModulesConfigAdapter<>(m));
+
+        currentPhase = ConstructionPhase.DISCOVERED;
+    }
+
+    /**
+     * Starts the module enabling phase.
+     */
+    public void startModuleConstruction() {
+        Preconditions.checkArgument(currentPhase == ConstructionPhase.DISCOVERED);
+        currentPhase = ConstructionPhase.ENABLING;
     }
 
     /**

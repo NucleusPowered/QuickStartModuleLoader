@@ -5,14 +5,17 @@
 package uk.co.drnaylor.quickstart.config;
 
 import ninja.leaping.configurate.ConfigurationNode;
-import ninja.leaping.configurate.commented.CommentedConfigurationNode;
 import ninja.leaping.configurate.loader.ConfigurationLoader;
 
-public abstract class AbstractConfigAdapter<N extends ConfigurationNode, T extends ConfigurationLoader<N>, R> {
+public abstract class SimpleNodeConfigAdapter<N extends ConfigurationNode, T extends ConfigurationLoader<N>> extends AbstractConfigAdapter<N, T, N> {
 
-    public abstract CommentedConfigurationNode getDefaults();
+    @Override
+    public N getData(N data) {
+        return data;
+    }
 
-    public abstract R getData(N node);
-
-    public abstract N setData(R data);
+    @Override
+    public N setData(N data) {
+        return data;
+    }
 }

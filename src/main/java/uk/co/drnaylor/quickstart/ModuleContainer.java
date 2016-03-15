@@ -8,7 +8,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Maps;
 import ninja.leaping.configurate.ConfigurationNode;
 import ninja.leaping.configurate.loader.ConfigurationLoader;
-import uk.co.drnaylor.quickstart.config.SystemConfig;
 import uk.co.drnaylor.quickstart.constructors.ModuleConstructor;
 import uk.co.drnaylor.quickstart.constructors.SimpleModuleConstructor;
 import uk.co.drnaylor.quickstart.enums.ConstructionPhase;

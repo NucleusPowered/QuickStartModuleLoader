@@ -5,8 +5,7 @@
 package uk.co.drnaylor.quickstart.constructors;
 
 import uk.co.drnaylor.quickstart.Module;
-import uk.co.drnaylor.quickstart.exceptions.ModuleConstructionException;
-import uk.co.drnaylor.quickstart.exceptions.ModuleEnableException;
+import uk.co.drnaylor.quickstart.exceptions.QuickStartModuleLoaderException;
 
 /**
  * A simple module constructor that tries to construct using a no-args constructor via reflection, and enable it
@@ -22,20 +21,20 @@ public class SimpleModuleConstructor implements ModuleConstructor {
     private SimpleModuleConstructor() { }
 
     @Override
-    public Module constructModule(Class<? extends Module> moduleClass) throws ModuleConstructionException {
+    public Module constructModule(Class<? extends Module> moduleClass) throws QuickStartModuleLoaderException.Construction {
         try {
             return moduleClass.newInstance();
         } catch (InstantiationException | IllegalAccessException e) {
-            throw new ModuleConstructionException(moduleClass, "Unable to construct the module: " + moduleClass.getName(), e);
+            throw new QuickStartModuleLoaderException.Construction(moduleClass, "Unable to construct the module: " + moduleClass.getName(), e);
         }
     }
 
     @Override
-    public void enableModule(Module module) throws ModuleEnableException {
+    public void enableModule(Module module) throws QuickStartModuleLoaderException.Enabling {
         try {
             module.onEnable();
         } catch (Exception e) {
-            throw new ModuleEnableException(module.getClass(), "Unable to enable the module: " + module.getClass().getName(), e);
+            throw new QuickStartModuleLoaderException.Enabling(module.getClass(), "Unable to enable the module: " + module.getClass().getName(), e);
         }
     }
 }

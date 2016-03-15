@@ -6,6 +6,8 @@ package uk.co.drnaylor.quickstart.annotations;
 
 import uk.co.drnaylor.quickstart.enums.LoadingStatus;
 
+import java.lang.annotation.*;
+
 /**
  * This annotation is intended to be used on {@link uk.co.drnaylor.quickstart.Module} files. It specifies the default
  * status of the module using the {@link LoadingStatus} enum, and other metadata.
@@ -14,6 +16,9 @@ import uk.co.drnaylor.quickstart.enums.LoadingStatus;
  *     If a module is discovered without this annotation, then we'll try to make do...
  * </p>
  */
+@Retention(RetentionPolicy.RUNTIME)
+@Target(ElementType.TYPE)
+@Documented
 public @interface ModuleData {
 
     /**

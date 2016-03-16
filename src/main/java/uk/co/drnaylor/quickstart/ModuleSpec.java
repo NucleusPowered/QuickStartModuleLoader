@@ -16,7 +16,7 @@ final class ModuleSpec {
 
     private final Class<? extends Module> moduleClass;
     private final String name;
-    private final LoadingStatus status;
+    private LoadingStatus status;
     private final boolean isMandatory;
     private ModulePhase phase = ModulePhase.DISCOVERED;
 
@@ -63,6 +63,16 @@ final class ModuleSpec {
     }
 
     /**
+     * Sets the {@link LoadingStatus} for the module.
+     *
+     * @param status The {@link LoadingStatus}
+     */
+    public void setStatus(LoadingStatus status) {
+        Preconditions.checkState(phase == ModulePhase.DISCOVERED);
+        this.status = status;
+    }
+
+    /**
      * Gets whether the module is mandatory. This is equivalent to {@link LoadingStatus#FORCELOAD}, but it cannot be
      * changed via a config file.
      *
@@ -79,14 +89,5 @@ final class ModuleSpec {
      */
     public ModulePhase getPhase() {
         return phase;
-    }
-
-    /**
-     * Sets the current {@link ModulePhase} of the module.
-     *
-     * @param phase The current phase of the module.
-     */
-    public void setPhase(ModulePhase phase) {
-        this.phase = phase;
     }
 }

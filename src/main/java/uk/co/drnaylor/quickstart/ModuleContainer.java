@@ -9,13 +9,12 @@ import com.google.common.collect.Maps;
 import com.google.common.reflect.ClassPath;
 import ninja.leaping.configurate.ConfigurationNode;
 import ninja.leaping.configurate.loader.ConfigurationLoader;
+import ninja.leaping.configurate.objectmapping.ObjectMappingException;
 import uk.co.drnaylor.quickstart.annotations.ModuleData;
-import uk.co.drnaylor.quickstart.config.ModulesConfigAdapter;
 import uk.co.drnaylor.quickstart.constructors.ModuleConstructor;
 import uk.co.drnaylor.quickstart.constructors.SimpleModuleConstructor;
 import uk.co.drnaylor.quickstart.enums.ConstructionPhase;
 import uk.co.drnaylor.quickstart.enums.LoadingStatus;
-import uk.co.drnaylor.quickstart.enums.ModulePhase;
 import uk.co.drnaylor.quickstart.exceptions.NoModuleException;
 import uk.co.drnaylor.quickstart.exceptions.QuickStartModuleDiscoveryException;
 import uk.co.drnaylor.quickstart.exceptions.QuickStartModuleLoaderException;
@@ -26,6 +25,7 @@ import java.text.MessageFormat;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Consumer;
+import java.util.function.Predicate;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
@@ -138,7 +138,17 @@ public final class ModuleContainer {
                 .collect(Collectors.toMap(Map.Entry::getKey, v -> v.getValue().getStatus()));
 
         // Attaches config adapter and loads in the defaults.
-        config.attachConfigAdapter(ModulesConfigAdapter.modulesKey, new ModulesConfigAdapter<>(m));
+        config.attachModulesConfig(m);
+
+        // Load what we have in config into our discovered modules.
+        try {
+            config.getConfigAdapter().getNode().forEach((k, v) -> {
+                discoveredModules.get(k).setStatus(v);
+            });
+        } catch (ObjectMappingException e) {
+            Logger.getLogger("QuickStart").warning("Could not load modules config, falling back to defaults.");
+            e.printStackTrace();
+        }
 
         // Modules have been discovered.
         currentPhase = ConstructionPhase.DISCOVERED;
@@ -167,7 +177,7 @@ public final class ModuleContainer {
      * @return The modules that are going to be loaded.
      */
     public Set<String> getModules() {
-        return getModules(true);
+        return getModules(ModuleStatusTristate.ENABLE);
     }
 
     /**
@@ -176,10 +186,10 @@ public final class ModuleContainer {
      * @param enabledOnly If <code>true</code>, only return modules that are going to be loaded.
      * @return The modules.
      */
-    public Set<String> getModules(final boolean enabledOnly) {
+    public Set<String> getModules(final ModuleStatusTristate enabledOnly) {
+        Preconditions.checkNotNull(enabledOnly);
         Preconditions.checkArgument(currentPhase != ConstructionPhase.INITALISED && currentPhase != ConstructionPhase.DISCOVERING);
-        return discoveredModules.entrySet().stream().filter(k -> enabledOnly || k.getValue().getStatus() != LoadingStatus.DISABLED)
-                .map(Map.Entry::getKey).collect(Collectors.toSet());
+        return discoveredModules.entrySet().stream().filter(enabledOnly.statusPredicate).map(Map.Entry::getKey).collect(Collectors.toSet());
     }
 
     /**
@@ -198,12 +208,11 @@ public final class ModuleContainer {
             throw new NoModuleException(moduleName);
         }
 
-        // TODO: Get this from the config file actually.
         if (ms.isMandatory() || ms.getStatus() == LoadingStatus.FORCELOAD) {
             throw new UndisableableModuleException(moduleName);
         }
 
-        ms.setPhase(ModulePhase.DISABLED);
+        ms.setStatus(LoadingStatus.DISABLED);
     }
 
     /**
@@ -293,6 +302,18 @@ public final class ModuleContainer {
             }
 
             return new ModuleContainer(configurationLoader, classLoader, packageToScan, constructor);
+        }
+    }
+
+    enum ModuleStatusTristate {
+        ENABLE(k -> k.getValue().getStatus() != LoadingStatus.DISABLED),
+        DISABLE(k -> k.getValue().getStatus() == LoadingStatus.DISABLED),
+        ALL(k -> true);
+
+        private final Predicate<Map.Entry<String, ModuleSpec>> statusPredicate;
+
+        private ModuleStatusTristate(Predicate<Map.Entry<String, ModuleSpec>> p) {
+            statusPredicate = p;
         }
     }
 }

@@ -7,10 +7,6 @@ package uk.co.drnaylor.quickstart.config;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.reflect.TypeToken;
 import ninja.leaping.configurate.ConfigurationNode;
-import ninja.leaping.configurate.SimpleConfigurationNode;
-import ninja.leaping.configurate.commented.CommentedConfigurationNode;
-import ninja.leaping.configurate.commented.SimpleCommentedConfigurationNode;
-import ninja.leaping.configurate.loader.ConfigurationLoader;
 import ninja.leaping.configurate.objectmapping.ObjectMappingException;
 import uk.co.drnaylor.quickstart.enums.LoadingStatus;
 
@@ -18,10 +14,9 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Configuration adapter that handles the module statues.
+ * Configuration adapter that handles the module statuses.
  */
-public final class ModulesConfigAdapter<T extends ConfigurationLoader<ConfigurationNode>>
-        extends AbstractConfigAdapter<ConfigurationNode, T, Map<String, LoadingStatus>> {
+public final class ModulesConfigAdapter<N extends ConfigurationNode> extends AbstractConfigAdapter<N, Map<String, LoadingStatus>> {
 
     public static final String modulesKey = "modules";
 
@@ -32,12 +27,13 @@ public final class ModulesConfigAdapter<T extends ConfigurationLoader<Configurat
     }
 
     @Override
-    public CommentedConfigurationNode getDefaults() {
-        return SimpleCommentedConfigurationNode.root().setValue(defaults);
+    @SuppressWarnings("unchecked")
+    protected N generateDefaults(N node) {
+        return (N)node.setValue(defaults);
     }
 
     @Override
-    public Map<String, LoadingStatus> getData(ConfigurationNode node) {
+    protected Map<String, LoadingStatus> convertFromConfigurateNode(N node) {
         HashMap<String, LoadingStatus> value = null;
         try {
             value = node.getValue(new TypeToken<HashMap<String, LoadingStatus>>() {});
@@ -53,7 +49,8 @@ public final class ModulesConfigAdapter<T extends ConfigurationLoader<Configurat
     }
 
     @Override
-    public ConfigurationNode setData(Map<String, LoadingStatus> data) {
-        return SimpleConfigurationNode.root().setValue(data);
+    @SuppressWarnings("unchecked")
+    protected N insertIntoConfigurateNode(Map<String, LoadingStatus> data) {
+        return (N)this.getNewNode().setValue(data);
     }
 }

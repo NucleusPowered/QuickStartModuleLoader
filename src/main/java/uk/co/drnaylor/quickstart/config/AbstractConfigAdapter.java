@@ -4,15 +4,162 @@
  */
 package uk.co.drnaylor.quickstart.config;
 
+import com.google.common.base.Preconditions;
 import ninja.leaping.configurate.ConfigurationNode;
-import ninja.leaping.configurate.commented.CommentedConfigurationNode;
-import ninja.leaping.configurate.loader.ConfigurationLoader;
+import ninja.leaping.configurate.objectmapping.ObjectMappingException;
 
-public abstract class AbstractConfigAdapter<N extends ConfigurationNode, T extends ConfigurationLoader<N>, R> {
+import java.util.Optional;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
 
-    public abstract CommentedConfigurationNode getDefaults();
+/**
+ * This is the base of all configuration adapters that can be attached to {@link AbstractAdaptableConfig} files. It
+ * essentially controls a subnode of the config file, as defined by the module when this is attached to the
+ * {@link AbstractConfigAdapter}.
+ *
+ * <p>
+ *      There are two states to this object: unattached and attached.
+ * </p>
+ * <ul>
+ *     <li>
+ *          The <strong>unattached</strong> state is where it hasn't been assigned to an {@link AbstractAdaptableConfig}
+ *          yet, so no actual configuration manipulation can take place.
+ *     </li>
+ *     <li>
+ *          The <strong>attached</strong> state is where this adapter <em>has</em> been assigned to an {@link AbstractAdaptableConfig}
+ *          and can manipulate the config section it has been assigned.
+ *     </li>
+ * </ul>
+ * <p>
+ *     This state can be checked by calling {@link #isAttached()}. To attach, pass this object as an argument to the
+ *     {@link AbstractAdaptableConfig#attachConfigAdapter(String, AbstractConfigAdapter)} method.
+ * </p>
+ *
+ * @param <N> The type of {@link ConfigurationNode} to use.
+ * @param <R> The class that represents the structure of the node. This can be {@link N} (see the {@link SimpleNodeConfigAdapter}).
+ */
+public abstract class AbstractConfigAdapter<N extends ConfigurationNode, R> {
 
-    public abstract R getData(N node);
+    private AbstractAdaptableConfig<N, ?> attachedConfig = null;
+    private Supplier<N> nodeGetter = null;
+    private Supplier<N> nodeCreator = null;
+    private Consumer<N> nodeSaver = null;
+    private String module = null;
 
-    public abstract N setData(R data);
+    final void attachConfig(String module, AbstractAdaptableConfig<N, ?> adapter, Supplier<N> nodeGetter, Consumer<N> nodeSaver, Supplier<N> nodeCreator) {
+        Preconditions.checkState(attachedConfig == null);
+        this.module = module;
+        this.attachedConfig = adapter;
+        this.nodeGetter = nodeGetter;
+        this.nodeSaver = nodeSaver;
+        this.nodeCreator = nodeCreator;
+    }
+
+    /**
+     * Returns whether this adapater has been attached to a config file.
+     *
+     * @return <code>true</code> if attached.
+     */
+    public final boolean isAttached() {
+        return attachedConfig != null;
+    }
+
+    /**
+     * Gets the defaults for this {@link AbstractConfigAdapter}.
+     *
+     * @return A {@link ConfigurationNode} that represents the defaults to merge in.
+     */
+    public final N getDefaults() {
+        return generateDefaults(nodeGetter.get());
+    }
+
+    /**
+     * Gets the {@link AbstractAdaptableConfig} that this adapter is attached to, if it has been attached.
+     *
+     * @return An {@link Optional}, which is empty if the adapter has not been attached yet.
+     */
+    public final Optional<AbstractAdaptableConfig<N, ?>> getConfig() {
+        return Optional.ofNullable(attachedConfig);
+    }
+
+    /**
+     * Gets the data that this adapter manages.
+     *
+     * @return An object of type {@link R}.
+     * @see #convertFromConfigurateNode(ConfigurationNode)
+     * @throws ObjectMappingException if the object could not be created.
+     */
+    public final R getNode() throws ObjectMappingException {
+        Preconditions.checkState(attachedConfig != null, "You must attach this adapter before using it.");
+
+        return convertFromConfigurateNode(nodeGetter.get());
+    }
+
+    /**
+     * Saves the data that this adapter manages back to the config manager.
+     *
+     * @param data An object of type {@link R}.
+     * @see #insertIntoConfigurateNode(Object)
+     * @throws ObjectMappingException if the object could not be saved.
+     */
+    public final void setNode(R data) throws ObjectMappingException {
+        Preconditions.checkState(attachedConfig != null, "You must attach this adapter before using it.");
+
+        nodeSaver.accept(insertIntoConfigurateNode(data));
+    }
+
+    /**
+     * Convenience method that allows a new {@link ConfigurationNode} of the correct type to be produced.
+     *
+     * @return The node.
+     */
+    protected final N getNewNode() {
+        Preconditions.checkState(attachedConfig != null, "You must attach this adapter before using it.");
+        return nodeCreator.get();
+    }
+
+    /**
+     * Gets the module that this adapter has been assigned to, if it has been attached.
+     *
+     * @return An {@link Optional}, which is empty if the adapter has not been attached yet.
+     */
+    protected Optional<String> getAssignedModule() {
+        return Optional.ofNullable(module);
+    }
+
+    /**
+     * Provides the default set of data for this adapter.
+     *
+     * @param node An empty node to populate.
+     * @return The populated node.
+     */
+    protected abstract N generateDefaults(N node);
+
+    /**
+     * Converts from {@link ConfigurationNode} to an object of type {@link R}.
+     *
+     * <p>
+     *     The return value from this object represents the root of the module's config section - that is,
+     *     is located at the node "module" in the config tree when saved.
+     * </p>
+     *
+     * @param node The node to convert into the object of type {@link R}
+     * @return The object of type {@link R}
+     * @throws ObjectMappingException if the object could not be created.
+     */
+    protected abstract R convertFromConfigurateNode(N node) throws ObjectMappingException;
+
+    /**
+     * Converts from an object of type {@link R} to a {@link ConfigurationNode} of type {@link N}.
+     *
+     * <p>
+     *     The return value from this object will be the root of the module's config section - that is,
+     *     will be located at the node "module" in the config tree when saved.
+     * </p>
+     *
+     * @param data The object to convert into a config node.
+     * @return The {@link ConfigurationNode} of type {@link N}
+     * @throws ObjectMappingException if the object could not be created.
+     */
+    protected abstract N insertIntoConfigurateNode(R data) throws ObjectMappingException;
 }

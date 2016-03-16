@@ -100,7 +100,7 @@ public final class ModuleContainer {
      *
      * @throws QuickStartModuleDiscoveryException if there is an error starting the Module Container.
      */
-    private ModuleContainer(ConfigurationLoader<? extends ConfigurationNode> configurationLoader, ClassLoader loader, String packageBase, ModuleConstructor constructor) throws QuickStartModuleDiscoveryException {
+    private <N extends ConfigurationNode> ModuleContainer(ConfigurationLoader<N> configurationLoader, ClassLoader loader, String packageBase, ModuleConstructor constructor) throws QuickStartModuleDiscoveryException {
 
         try {
             Preconditions.checkNotNull(configurationLoader);
@@ -136,9 +136,20 @@ public final class ModuleContainer {
         // Modules discovered. Create the Module Config adapter.
         Map<String, LoadingStatus> m = discoveredModules.entrySet().stream().filter(x -> !x.getValue().isMandatory())
                 .collect(Collectors.toMap(Map.Entry::getKey, v -> v.getValue().getStatus()));
+
+        // Attaches config adapter and loads in the defaults.
         config.attachConfigAdapter(ModulesConfigAdapter.modulesKey, new ModulesConfigAdapter<>(m));
 
+        // Modules have been discovered.
         currentPhase = ConstructionPhase.DISCOVERED;
+    }
+
+    public void constructModules() throws QuickStartModuleLoaderException {
+        Preconditions.checkArgument(currentPhase == ConstructionPhase.DISCOVERED);
+        currentPhase = ConstructionPhase.ENABLING;
+
+        // Get the modules to enable.
+
     }
 
     /**
@@ -175,6 +186,8 @@ public final class ModuleContainer {
      * Requests that a module be disabled. This can only be run during the {@link ConstructionPhase#DISCOVERED} phase.
      *
      * @param moduleName The ID of the module.
+     * @throws UndisableableModuleException if the module can't be disabled.
+     * @throws NoModuleException if the module does not exist.
      */
     public void disableModule(String moduleName) throws UndisableableModuleException, NoModuleException {
         Preconditions.checkArgument(currentPhase == ConstructionPhase.DISCOVERED);
@@ -195,6 +208,9 @@ public final class ModuleContainer {
 
     /**
      * Starts the module enabling phase.
+     *
+     * @throws uk.co.drnaylor.quickstart.exceptions.QuickStartModuleLoaderException.Construction if the module cannot be constructed.
+     * @throws uk.co.drnaylor.quickstart.exceptions.QuickStartModuleLoaderException.Enabling if the module cannot be enabled.
      */
     public void startModuleConstruction() throws QuickStartModuleLoaderException.Construction, QuickStartModuleLoaderException.Enabling {
         Preconditions.checkArgument(currentPhase == ConstructionPhase.DISCOVERED);

@@ -5,17 +5,22 @@
 package uk.co.drnaylor.quickstart.config;
 
 import ninja.leaping.configurate.ConfigurationNode;
-import ninja.leaping.configurate.loader.ConfigurationLoader;
+import ninja.leaping.configurate.objectmapping.ObjectMappingException;
 
-public abstract class SimpleNodeConfigAdapter<N extends ConfigurationNode, T extends ConfigurationLoader<N>> extends AbstractConfigAdapter<N, T, N> {
+public class SimpleNodeConfigAdapter<N extends ConfigurationNode> extends AbstractConfigAdapter<N, N> {
 
     @Override
-    public N getData(N data) {
-        return data;
+    protected N generateDefaults(N node) {
+        return node;
     }
 
     @Override
-    public N setData(N data) {
+    protected N convertFromConfigurateNode(N node) {
+        return node;
+    }
+
+    @Override
+    protected N insertIntoConfigurateNode(N data) throws ObjectMappingException {
         return data;
     }
 }

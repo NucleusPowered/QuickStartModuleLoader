@@ -66,7 +66,7 @@ public final class ModuleContainer {
     /**
      * The current phase of the container.
      */
-    private ConstructionPhase currentPhase = ConstructionPhase.DISCOVERING;
+    private ConstructionPhase currentPhase = ConstructionPhase.INITALISED;
 
     /**
      * The modules that have been discovered by the container.
@@ -127,7 +127,7 @@ public final class ModuleContainer {
      * Starts discovery of modules.
      */
     private void discoverModules() throws IOException {
-        Preconditions.checkArgument(currentPhase == ConstructionPhase.INITALISED);
+        Preconditions.checkState(currentPhase == ConstructionPhase.INITALISED);
         currentPhase = ConstructionPhase.DISCOVERING;
 
         // Get the modules out.

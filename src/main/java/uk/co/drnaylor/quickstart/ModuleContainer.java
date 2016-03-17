@@ -15,6 +15,7 @@ import uk.co.drnaylor.quickstart.constructors.ModuleConstructor;
 import uk.co.drnaylor.quickstart.constructors.SimpleModuleConstructor;
 import uk.co.drnaylor.quickstart.enums.ConstructionPhase;
 import uk.co.drnaylor.quickstart.enums.LoadingStatus;
+import uk.co.drnaylor.quickstart.enums.ModulePhase;
 import uk.co.drnaylor.quickstart.exceptions.NoModuleException;
 import uk.co.drnaylor.quickstart.exceptions.QuickStartModuleDiscoveryException;
 import uk.co.drnaylor.quickstart.exceptions.QuickStartModuleLoaderException;
@@ -22,6 +23,7 @@ import uk.co.drnaylor.quickstart.exceptions.UndisableableModuleException;
 
 import java.io.IOException;
 import java.text.MessageFormat;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Consumer;
@@ -154,14 +156,6 @@ public final class ModuleContainer {
         currentPhase = ConstructionPhase.DISCOVERED;
     }
 
-    public void constructModules() throws QuickStartModuleLoaderException {
-        Preconditions.checkArgument(currentPhase == ConstructionPhase.DISCOVERED);
-        currentPhase = ConstructionPhase.ENABLING;
-
-        // Get the modules to enable.
-
-    }
-
     /**
      * Gets the current phase of the module loader.
      *
@@ -216,16 +210,76 @@ public final class ModuleContainer {
     }
 
     /**
-     * Starts the module enabling phase.
+     * Starts the module consturction and enabling phase. This is the final phase for loading the modules.
      *
-     * @throws uk.co.drnaylor.quickstart.exceptions.QuickStartModuleLoaderException.Construction if the module cannot be constructed.
-     * @throws uk.co.drnaylor.quickstart.exceptions.QuickStartModuleLoaderException.Enabling if the module cannot be enabled.
+     * <p>
+     *     Once this method is called, modules can no longer be removed.
+     * </p>
+     *
+     * @param failOnOneError If set to <code>true</code>, one module failure will mark the whole loading sequence as failed.
+     *                       Otherwise, no modules being constructed will cause a failure.
+     *
+     * @throws uk.co.drnaylor.quickstart.exceptions.QuickStartModuleLoaderException.Construction if the modules cannot be constructed.
+     * @throws uk.co.drnaylor.quickstart.exceptions.QuickStartModuleLoaderException.Enabling if the modules cannot be enabled.
      */
-    public void startModuleConstruction() throws QuickStartModuleLoaderException.Construction, QuickStartModuleLoaderException.Enabling {
+    public void loadModules(boolean failOnOneError) throws QuickStartModuleLoaderException.Construction, QuickStartModuleLoaderException.Enabling {
         Preconditions.checkArgument(currentPhase == ConstructionPhase.DISCOVERED);
         currentPhase = ConstructionPhase.ENABLING;
 
+        // Get the modules that are being disabled and mark them as such.
+        getModules(ModuleStatusTristate.DISABLE).forEach(k -> discoveredModules.get(k).setPhase(ModulePhase.DISABLED));
 
+        // Modules to enable.
+        Map<String, Module> modules = Maps.newConcurrentMap();
+
+        // Construct them
+        for (String s : getModules(ModuleStatusTristate.ENABLE)) {
+            ModuleSpec ms = discoveredModules.get(s);
+            try {
+                modules.put(s, constructor.constructModule(ms.getModuleClass()));
+                ms.setPhase(ModulePhase.CONSTRUCTED);
+            } catch (QuickStartModuleLoaderException.Construction construction) {
+                construction.printStackTrace();
+                ms.setPhase(ModulePhase.ERRORED);
+
+                if (failOnOneError) {
+                    currentPhase = ConstructionPhase.ERRORED;
+                    throw construction;
+                }
+            }
+        }
+
+        if (modules.isEmpty()) {
+            currentPhase = ConstructionPhase.ERRORED;
+            throw new QuickStartModuleLoaderException.Construction(null, "No modules were constructed.", null);
+        }
+
+        // Enter Enable phase.
+        Map<String, Module> c = new HashMap<>(modules);
+        for (String s : c.keySet()) {
+            ModuleSpec ms = discoveredModules.get(s);
+
+            try {
+                constructor.enableModule(modules.get(s));
+                ms.setPhase(ModulePhase.ENABLED);
+            } catch (QuickStartModuleLoaderException.Enabling construction) {
+                construction.printStackTrace();
+                modules.remove(s);
+                ms.setPhase(ModulePhase.ERRORED);
+
+                if (failOnOneError) {
+                    currentPhase = ConstructionPhase.ERRORED;
+                    throw construction;
+                }
+            }
+        }
+
+        if (c.isEmpty()) {
+            currentPhase = ConstructionPhase.ERRORED;
+            throw new QuickStartModuleLoaderException.Construction(null, "No modules were enabled.", null);
+        }
+
+        currentPhase = ConstructionPhase.ENABLED;
     }
 
     /**

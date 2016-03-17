@@ -90,4 +90,14 @@ final class ModuleSpec {
     public ModulePhase getPhase() {
         return phase;
     }
+
+    /**
+     * Sets the phase of the module.
+     *
+     * @param phase The {@link ModulePhase}
+     */
+    void setPhase(ModulePhase phase) {
+        Preconditions.checkState(phase == ModulePhase.DISCOVERED);
+        this.phase = phase;
+    }
 }

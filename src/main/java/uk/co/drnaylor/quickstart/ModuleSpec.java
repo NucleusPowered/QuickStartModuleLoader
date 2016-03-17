@@ -31,7 +31,7 @@ final class ModuleSpec {
 
         this.moduleClass = moduleClass;
         this.name = name;
-        this.status = status;
+        this.status = isMandatory ? LoadingStatus.FORCELOAD : status;
         this.isMandatory = isMandatory;
     }
 
@@ -69,6 +69,7 @@ final class ModuleSpec {
      */
     public void setStatus(LoadingStatus status) {
         Preconditions.checkState(phase == ModulePhase.DISCOVERED);
+        Preconditions.checkState(!isMandatory);
         this.status = status;
     }
 

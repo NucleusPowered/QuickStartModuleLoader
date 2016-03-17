@@ -25,17 +25,17 @@ import java.util.function.Supplier;
  */
 public class AbstractAdaptableConfig<N extends ConfigurationNode, T extends ConfigurationLoader<N>> {
 
-    private Map<String, AbstractConfigAdapter<N, ?>> moduleConfigAdapters = Maps.newHashMap();
+    private Map<String, AbstractConfigAdapter<?>> moduleConfigAdapters = Maps.newHashMap();
 
     private final T loader;
     private N node;
-    private final Supplier<N> nodeCreator;
+    private final Supplier<ConfigurationNode> nodeCreator;
 
     public AbstractAdaptableConfig(T loader) throws IOException {
         this(loader, loader::createEmptyNode);
     }
 
-    public AbstractAdaptableConfig(T loader, Supplier<N> nodeCreator) throws IOException {
+    public AbstractAdaptableConfig(T loader, Supplier<ConfigurationNode> nodeCreator) throws IOException {
         Preconditions.checkNotNull(loader);
         Preconditions.checkNotNull(nodeCreator);
 
@@ -63,12 +63,12 @@ public class AbstractAdaptableConfig<N extends ConfigurationNode, T extends Conf
      * @throws NoModuleException If the module has not had a config adapter attached to it.
      * @throws IncorrectAdapterTypeException If the specified {@link Class} is incorrect.
      */
-    public final <R extends AbstractConfigAdapter<N ,?>> R getConfigAdapterForModule(String module, Class<R> adapterClass) throws NoModuleException, IncorrectAdapterTypeException {
+    public final <R extends AbstractConfigAdapter<N>> R getConfigAdapterForModule(String module, Class<R> adapterClass) throws NoModuleException, IncorrectAdapterTypeException {
         if (!moduleConfigAdapters.containsKey(module.toLowerCase())) {
             throw new NoModuleException(module);
         }
 
-        AbstractConfigAdapter<N, ?> aca = moduleConfigAdapters.get(module);
+        AbstractConfigAdapter<?> aca = moduleConfigAdapters.get(module);
         if (adapterClass.isInstance(aca)) {
             return adapterClass.cast(aca);
         }
@@ -91,7 +91,7 @@ public class AbstractAdaptableConfig<N extends ConfigurationNode, T extends Conf
             throw new IllegalArgumentException();
         }
 
-        configAdapter.attachConfig(module.toLowerCase(), this, () -> (N)node.getNode(module.toLowerCase()), n -> node.setValue(n), nodeCreator);
+        configAdapter.attachConfig(module.toLowerCase(), this, () -> node.getNode(module.toLowerCase()), n -> node.setValue(n), nodeCreator);
         moduleConfigAdapters.put(module.toLowerCase(), configAdapter);
         saveAdapterDefaults();
     }

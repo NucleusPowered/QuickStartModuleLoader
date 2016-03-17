@@ -21,7 +21,7 @@ import java.util.Map;
 public final class SystemConfig<N extends ConfigurationNode, T extends ConfigurationLoader<N>> extends AbstractAdaptableConfig<N, T> {
 
     private final String modulesNode = "modules";
-    private ModulesConfigAdapter<N> configAdapter;
+    private ModulesConfigAdapter configAdapter;
 
     SystemConfig(T loader) throws IOException {
         super(loader);
@@ -31,11 +31,11 @@ public final class SystemConfig<N extends ConfigurationNode, T extends Configura
         Preconditions.checkNotNull(defaults);
         Preconditions.checkState(configAdapter == null);
 
-        configAdapter = new ModulesConfigAdapter<>(defaults);
+        configAdapter = new ModulesConfigAdapter(defaults);
         this.attachConfigAdapter(modulesNode, configAdapter);
     }
 
-    public ModulesConfigAdapter<N> getConfigAdapter() {
+    public ModulesConfigAdapter getConfigAdapter() {
         return configAdapter;
     }
 }

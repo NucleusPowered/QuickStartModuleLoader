@@ -25,4 +25,14 @@ public class ModuleContainerConstructionTests extends FakeLoaderTests {
     public void testThatUnenableableModulesThrow() throws QuickStartModuleDiscoveryException, QuickStartModuleLoaderException.Enabling, QuickStartModuleLoaderException.Construction {
         getContainer("uk.co.drnaylor.quickstart.tests.modules.exceptions.enabling").loadModules(true);
     }
+
+    @Test
+    public void testThatSimpleNoConfigModuleConstructsAndEnables() throws QuickStartModuleDiscoveryException, QuickStartModuleLoaderException.Enabling, QuickStartModuleLoaderException.Construction {
+        getContainer("uk.co.drnaylor.quickstart.tests.modules.simplenoconfig").loadModules(true);
+    }
+
+    @Test
+    public void testThatSimpleConfigModuleConstructsAndEnables() throws QuickStartModuleDiscoveryException, QuickStartModuleLoaderException.Enabling, QuickStartModuleLoaderException.Construction {
+        getContainer("uk.co.drnaylor.quickstart.tests.modules.simpleconfig").loadModules(true);
+    }
 }

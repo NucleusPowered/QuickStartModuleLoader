@@ -98,7 +98,7 @@ final class ModuleSpec {
      * @param phase The {@link ModulePhase}
      */
     void setPhase(ModulePhase phase) {
-        Preconditions.checkState(phase == ModulePhase.DISCOVERED);
+        Preconditions.checkState(this.phase != ModulePhase.ENABLED && this.phase != ModulePhase.DISABLED && this.phase != ModulePhase.ERRORED);
         this.phase = phase;
     }
 }

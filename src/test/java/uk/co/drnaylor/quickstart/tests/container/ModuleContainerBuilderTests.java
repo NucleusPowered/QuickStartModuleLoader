@@ -4,33 +4,17 @@
  */
 package uk.co.drnaylor.quickstart.tests.container;
 
-import ninja.leaping.configurate.ConfigurationNode;
-import ninja.leaping.configurate.SimpleConfigurationNode;
-import ninja.leaping.configurate.loader.ConfigurationLoader;
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
 import uk.co.drnaylor.quickstart.ModuleContainer;
 import uk.co.drnaylor.quickstart.exceptions.QuickStartModuleDiscoveryException;
 import uk.co.drnaylor.quickstart.tests.modules.nontest.FakeModule;
-
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import uk.co.drnaylor.quickstart.tests.scaffolding.FakeLoaderTests;
 
 /**
  * Tests that the {@link uk.co.drnaylor.quickstart.ModuleContainer.Builder} can correctly build {@link uk.co.drnaylor.quickstart.ModuleContainer}s.
  */
-public class ModuleContainerBuilderTests {
-
-    private ConfigurationLoader<ConfigurationNode> loader;
-
-    @Before
-    @SuppressWarnings("unchecked")
-    public void beforeTests() throws Exception {
-        loader = (ConfigurationLoader<ConfigurationNode>)mock(ConfigurationLoader.class);
-        when(loader.createEmptyNode()).thenReturn(SimpleConfigurationNode.root());
-        when(loader.load()).thenReturn(SimpleConfigurationNode.root());
-    }
+public class ModuleContainerBuilderTests extends FakeLoaderTests {
 
     /**
      * When there is no package, test we throw a {@link NullPointerException}

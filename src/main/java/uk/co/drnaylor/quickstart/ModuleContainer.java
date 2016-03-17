@@ -242,13 +242,13 @@ public final class ModuleContainer {
             try {
                 modules.put(s, constructor.constructModule(ms.getModuleClass()));
                 ms.setPhase(ModulePhase.CONSTRUCTED);
-            } catch (QuickStartModuleLoaderException.Construction construction) {
+            } catch (Exception construction) {
                 construction.printStackTrace();
                 ms.setPhase(ModulePhase.ERRORED);
 
                 if (failOnOneError) {
                     currentPhase = ConstructionPhase.ERRORED;
-                    throw construction;
+                    throw new QuickStartModuleLoaderException.Construction(ms.getModuleClass(), "The module " + ms.getModuleClass().getName() + " failed to construct.", construction);
                 }
             }
         }
@@ -279,21 +279,21 @@ public final class ModuleContainer {
                 }
 
                 ms.setPhase(ModulePhase.ENABLED);
-            } catch (QuickStartModuleLoaderException.Enabling construction) {
+            } catch (Exception construction) {
                 construction.printStackTrace();
                 modules.remove(s);
                 ms.setPhase(ModulePhase.ERRORED);
 
                 if (failOnOneError) {
                     currentPhase = ConstructionPhase.ERRORED;
-                    throw construction;
+                    throw new QuickStartModuleLoaderException.Enabling(ms.getModuleClass(), "The module " + ms.getModuleClass().getName() + " failed to enable.", construction);
                 }
             }
         }
 
         if (c.isEmpty()) {
             currentPhase = ConstructionPhase.ERRORED;
-            throw new QuickStartModuleLoaderException.Construction(null, "No modules were enabled.", null);
+            throw new QuickStartModuleLoaderException.Enabling(null, "No modules were enabled.", null);
         }
 
         currentPhase = ConstructionPhase.ENABLED;

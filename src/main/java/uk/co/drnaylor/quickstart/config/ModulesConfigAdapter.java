@@ -16,7 +16,7 @@ import java.util.Map;
 /**
  * Configuration adapter that handles the module statuses.
  */
-public final class ModulesConfigAdapter<N extends ConfigurationNode> extends AbstractConfigAdapter<N, Map<String, LoadingStatus>> {
+public final class ModulesConfigAdapter extends AbstractConfigAdapter<Map<String, LoadingStatus>> {
 
     public static final String modulesKey = "modules";
 
@@ -28,12 +28,12 @@ public final class ModulesConfigAdapter<N extends ConfigurationNode> extends Abs
 
     @Override
     @SuppressWarnings("unchecked")
-    protected N generateDefaults(N node) {
-        return (N)node.setValue(defaults);
+    protected ConfigurationNode generateDefaults(ConfigurationNode node) {
+        return node.setValue(defaults);
     }
 
     @Override
-    protected Map<String, LoadingStatus> convertFromConfigurateNode(N node) {
+    protected Map<String, LoadingStatus> convertFromConfigurateNode(ConfigurationNode node) {
         HashMap<String, LoadingStatus> value = null;
         try {
             value = node.getValue(new TypeToken<HashMap<String, LoadingStatus>>() {});
@@ -50,7 +50,7 @@ public final class ModulesConfigAdapter<N extends ConfigurationNode> extends Abs
 
     @Override
     @SuppressWarnings("unchecked")
-    protected N insertIntoConfigurateNode(Map<String, LoadingStatus> data) {
-        return (N)this.getNewNode().setValue(data);
+    protected ConfigurationNode insertIntoConfigurateNode(Map<String, LoadingStatus> data) {
+        return this.getNewNode().setValue(data);
     }
 }

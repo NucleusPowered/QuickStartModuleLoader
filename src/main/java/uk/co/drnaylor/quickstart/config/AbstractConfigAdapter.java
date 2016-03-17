@@ -35,18 +35,17 @@ import java.util.function.Supplier;
  *     {@link AbstractAdaptableConfig#attachConfigAdapter(String, AbstractConfigAdapter)} method.
  * </p>
  *
- * @param <N> The type of {@link ConfigurationNode} to use.
- * @param <R> The class that represents the structure of the node. This can be {@link N} (see the {@link SimpleNodeConfigAdapter}).
+ * @param <R> The class that represents the structure of the node. This can be a {@link ConfigurationNode} (see the {@link SimpleNodeConfigAdapter}).
  */
-public abstract class AbstractConfigAdapter<N extends ConfigurationNode, R> {
+public abstract class AbstractConfigAdapter<R> {
 
-    private AbstractAdaptableConfig<N, ?> attachedConfig = null;
-    private Supplier<N> nodeGetter = null;
-    private Supplier<N> nodeCreator = null;
-    private Consumer<N> nodeSaver = null;
+    private AbstractAdaptableConfig<?, ?> attachedConfig = null;
+    private Supplier<ConfigurationNode> nodeGetter = null;
+    private Supplier<ConfigurationNode> nodeCreator = null;
+    private Consumer<ConfigurationNode> nodeSaver = null;
     private String module = null;
 
-    final void attachConfig(String module, AbstractAdaptableConfig<N, ?> adapter, Supplier<N> nodeGetter, Consumer<N> nodeSaver, Supplier<N> nodeCreator) {
+    final void attachConfig(String module, AbstractAdaptableConfig<?, ?> adapter, Supplier<ConfigurationNode> nodeGetter, Consumer<ConfigurationNode> nodeSaver, Supplier<ConfigurationNode> nodeCreator) {
         Preconditions.checkState(attachedConfig == null);
         this.module = module;
         this.attachedConfig = adapter;
@@ -69,7 +68,7 @@ public abstract class AbstractConfigAdapter<N extends ConfigurationNode, R> {
      *
      * @return A {@link ConfigurationNode} that represents the defaults to merge in.
      */
-    public final N getDefaults() {
+    public final ConfigurationNode getDefaults() {
         return generateDefaults(nodeGetter.get());
     }
 
@@ -78,7 +77,7 @@ public abstract class AbstractConfigAdapter<N extends ConfigurationNode, R> {
      *
      * @return An {@link Optional}, which is empty if the adapter has not been attached yet.
      */
-    public final Optional<AbstractAdaptableConfig<N, ?>> getConfig() {
+    public final Optional<AbstractAdaptableConfig<?, ?>> getConfig() {
         return Optional.ofNullable(attachedConfig);
     }
 
@@ -113,7 +112,7 @@ public abstract class AbstractConfigAdapter<N extends ConfigurationNode, R> {
      *
      * @return The node.
      */
-    protected final N getNewNode() {
+    protected final ConfigurationNode getNewNode() {
         Preconditions.checkState(attachedConfig != null, "You must attach this adapter before using it.");
         return nodeCreator.get();
     }
@@ -133,7 +132,7 @@ public abstract class AbstractConfigAdapter<N extends ConfigurationNode, R> {
      * @param node An empty node to populate.
      * @return The populated node.
      */
-    protected abstract N generateDefaults(N node);
+    protected abstract ConfigurationNode generateDefaults(ConfigurationNode node);
 
     /**
      * Converts from {@link ConfigurationNode} to an object of type {@link R}.
@@ -147,10 +146,10 @@ public abstract class AbstractConfigAdapter<N extends ConfigurationNode, R> {
      * @return The object of type {@link R}
      * @throws ObjectMappingException if the object could not be created.
      */
-    protected abstract R convertFromConfigurateNode(N node) throws ObjectMappingException;
+    protected abstract R convertFromConfigurateNode(ConfigurationNode node) throws ObjectMappingException;
 
     /**
-     * Converts from an object of type {@link R} to a {@link ConfigurationNode} of type {@link N}.
+     * Converts from an object of type {@link R} to a {@link ConfigurationNode} of the correct type.
      *
      * <p>
      *     The return value from this object will be the root of the module's config section - that is,
@@ -158,8 +157,8 @@ public abstract class AbstractConfigAdapter<N extends ConfigurationNode, R> {
      * </p>
      *
      * @param data The object to convert into a config node.
-     * @return The {@link ConfigurationNode} of type {@link N}
+     * @return The {@link ConfigurationNode}
      * @throws ObjectMappingException if the object could not be created.
      */
-    protected abstract N insertIntoConfigurateNode(R data) throws ObjectMappingException;
+    protected abstract ConfigurationNode insertIntoConfigurateNode(R data) throws ObjectMappingException;
 }

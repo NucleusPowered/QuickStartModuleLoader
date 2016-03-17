@@ -86,7 +86,7 @@ public class AbstractAdaptableConfig<N extends ConfigurationNode, T extends Conf
      * @throws IllegalStateException if the adapter has already been attached.
      */
     @SuppressWarnings("unchecked")
-    public final void attachConfigAdapter(String module, AbstractConfigAdapter<N, ?> configAdapter) throws IOException {
+    public final void attachConfigAdapter(String module, AbstractConfigAdapter<?> configAdapter) throws IOException {
         if (moduleConfigAdapters.containsKey(module.toLowerCase())) {
             throw new IllegalArgumentException();
         }

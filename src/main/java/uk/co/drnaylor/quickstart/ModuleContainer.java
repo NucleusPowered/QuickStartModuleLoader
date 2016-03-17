@@ -11,6 +11,7 @@ import ninja.leaping.configurate.ConfigurationNode;
 import ninja.leaping.configurate.loader.ConfigurationLoader;
 import ninja.leaping.configurate.objectmapping.ObjectMappingException;
 import uk.co.drnaylor.quickstart.annotations.ModuleData;
+import uk.co.drnaylor.quickstart.config.AbstractConfigAdapter;
 import uk.co.drnaylor.quickstart.constructors.ModuleConstructor;
 import uk.co.drnaylor.quickstart.constructors.SimpleModuleConstructor;
 import uk.co.drnaylor.quickstart.enums.ConstructionPhase;
@@ -25,6 +26,7 @@ import java.io.IOException;
 import java.text.MessageFormat;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
@@ -130,7 +132,9 @@ public final class ModuleContainer {
 
         // Get the modules out.
         Set<ClassPath.ClassInfo> ci = ClassPath.from(classLoader).getTopLevelClassesRecursive(packageLocation);
-        Set<Class<? extends Module>> modules = ci.stream().map(ClassPath.ClassInfo::load).map(x -> x.asSubclass(Module.class)).collect(Collectors.toSet());
+        Set<Class<? extends Module>> modules = ci.stream().map(ClassPath.ClassInfo::load)
+                .filter(Module.class::isAssignableFrom)
+                .map(x -> (Class<? extends Module>)x.asSubclass(Module.class)).collect(Collectors.toSet());
 
         // Put the modules into the discoverer.
         modules.forEach(modulePopulator);
@@ -210,7 +214,7 @@ public final class ModuleContainer {
     }
 
     /**
-     * Starts the module consturction and enabling phase. This is the final phase for loading the modules.
+     * Starts the module construction and enabling phase. This is the final phase for loading the modules.
      *
      * <p>
      *     Once this method is called, modules can no longer be removed.
@@ -260,7 +264,20 @@ public final class ModuleContainer {
             ModuleSpec ms = discoveredModules.get(s);
 
             try {
-                constructor.enableModule(modules.get(s));
+                Module m = modules.get(s);
+                constructor.enableModule(m);
+                Optional<AbstractConfigAdapter<?>> a = m.getConfigAdapter();
+                if (a.isPresent()) {
+                    try {
+                        config.attachConfigAdapter(s, a.get());
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                        if (failOnOneError) {
+                            throw new QuickStartModuleLoaderException.Enabling(m.getClass(), "Failed to attach config.", e);
+                        }
+                    }
+                }
+
                 ms.setPhase(ModulePhase.ENABLED);
             } catch (QuickStartModuleLoaderException.Enabling construction) {
                 construction.printStackTrace();
@@ -366,7 +383,7 @@ public final class ModuleContainer {
 
         private final Predicate<Map.Entry<String, ModuleSpec>> statusPredicate;
 
-        private ModuleStatusTristate(Predicate<Map.Entry<String, ModuleSpec>> p) {
+        ModuleStatusTristate(Predicate<Map.Entry<String, ModuleSpec>> p) {
             statusPredicate = p;
         }
     }

@@ -19,7 +19,7 @@ public interface Module {
      *
      * @return An {@link Optional} containing an {@link AbstractConfigAdapter} if the module wishes.
      */
-    default Optional<AbstractConfigAdapter> getConfigAdapter() {
+    default Optional<AbstractConfigAdapter<?>> getConfigAdapter() {
         return Optional.empty();
     }
 

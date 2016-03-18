@@ -145,7 +145,13 @@ public final class ModuleContainer {
 
         // Load what we have in config into our discovered modules.
         try {
-            config.getConfigAdapter().getNode().forEach((k, v) -> discoveredModules.get(k).setStatus(v));
+            config.getConfigAdapter().getNode().forEach((k, v) -> {
+                try {
+                    discoveredModules.get(k).setStatus(v);
+                } catch (IllegalStateException ex) {
+                    Logger.getLogger("QuickStart").warning("A mandatory module can't have its status changed by config. Falling back to FORCELOAD for " + k);
+                }
+            });
         } catch (ObjectMappingException e) {
             Logger.getLogger("QuickStart").warning("Could not load modules config, falling back to defaults.");
             e.printStackTrace();
@@ -382,7 +388,7 @@ public final class ModuleContainer {
         }
     }
 
-    enum ModuleStatusTristate {
+    public enum ModuleStatusTristate {
         ENABLE(k -> k.getValue().getStatus() != LoadingStatus.DISABLED),
         DISABLE(k -> k.getValue().getStatus() == LoadingStatus.DISABLED),
         ALL(k -> true);

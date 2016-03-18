@@ -4,6 +4,7 @@
  */
 package uk.co.drnaylor.quickstart.tests.tests;
 
+import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -14,6 +15,8 @@ import uk.co.drnaylor.quickstart.exceptions.QuickStartModuleDiscoveryException;
 import uk.co.drnaylor.quickstart.exceptions.QuickStartModuleLoaderException;
 import uk.co.drnaylor.quickstart.tests.config.adapters.SimpleWithDefault;
 import uk.co.drnaylor.quickstart.tests.scaffolding.FakeLoaderTests;
+
+import java.util.Set;
 
 import static org.junit.Assert.assertNotNull;
 
@@ -64,5 +67,17 @@ public class ModuleContainerConstructionTests extends FakeLoaderTests {
         assertNotNull(mca);
         assertNotNull(s);
         assertNotNull(s2);
+    }
+
+    @Test
+    public void testThatModulesAreLoadedAsExpected() throws Exception {
+        // When we load these modules...
+        ModuleContainer mc = getContainer("uk.co.drnaylor.quickstart.tests.modules.modulestates");
+        mc.loadModules(true);
+
+        Set<String> ss = mc.getModules(ModuleContainer.ModuleStatusTristate.ENABLE);
+        Assert.assertTrue(ss.contains("man"));
+        Assert.assertTrue(ss.contains("fl"));
+        Assert.assertFalse(ss.contains("dis"));
     }
 }

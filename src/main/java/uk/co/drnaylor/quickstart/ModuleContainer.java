@@ -384,6 +384,7 @@ public final class ModuleContainer {
                 classLoader = getClass().getClassLoader();
             }
 
+            Metadata.getStartupMessage().ifPresent(x -> Logger.getLogger("QuickStart").info(x));
             return new ModuleContainer(configurationLoader, classLoader, packageToScan, constructor);
         }
     }

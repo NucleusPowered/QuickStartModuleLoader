@@ -4,8 +4,21 @@
  */
 package uk.co.drnaylor.quickstart;
 
+import java.util.Optional;
+
 public class Metadata {
 
-    public static String NAME = "@name@";
-    public static String VERSION = "@version@";
+    public final static String NAME = "@name@";
+    public final static String VERSION = "@version@";
+
+    private static boolean hasStarted = false;
+
+    public static Optional<String> getStartupMessage() {
+        if (!hasStarted) {
+            hasStarted = true;
+            return Optional.of("Starting " + NAME + " version " + VERSION + " subsystem.");
+        }
+
+        return Optional.empty();
+    }
 }

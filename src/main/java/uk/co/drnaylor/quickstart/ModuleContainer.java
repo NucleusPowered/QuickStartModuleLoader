@@ -104,11 +104,6 @@ public final class ModuleContainer {
     private <N extends ConfigurationNode> ModuleContainer(ConfigurationLoader<N> configurationLoader, ClassLoader loader, String packageBase, ModuleConstructor constructor) throws QuickStartModuleDiscoveryException {
 
         try {
-            Preconditions.checkNotNull(configurationLoader);
-            Preconditions.checkNotNull(loader);
-            Preconditions.checkNotNull(packageBase);
-            Preconditions.checkNotNull(constructor);
-
             this.config = new SystemConfig<>(configurationLoader);
             this.constructor = constructor;
             this.classLoader = loader;
@@ -123,7 +118,7 @@ public final class ModuleContainer {
     /**
      * Starts discovery of modules.
      */
-    private void discoverModules() throws IOException {
+    private void discoverModules() throws IOException, QuickStartModuleDiscoveryException {
         Preconditions.checkState(currentPhase == ConstructionPhase.INITALISED);
         currentPhase = ConstructionPhase.DISCOVERING;
 
@@ -132,6 +127,10 @@ public final class ModuleContainer {
         Set<Class<? extends Module>> modules = ci.stream().map(ClassPath.ClassInfo::load)
                 .filter(Module.class::isAssignableFrom)
                 .map(x -> (Class<? extends Module>)x.asSubclass(Module.class)).collect(Collectors.toSet());
+
+        if (modules.isEmpty()) {
+            throw new QuickStartModuleDiscoveryException("No modules were found", null);
+        }
 
         // Put the modules into the discoverer.
         modules.forEach(modulePopulator);

@@ -4,7 +4,9 @@
  */
 package uk.co.drnaylor.quickstart.tests.tests;
 
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 import uk.co.drnaylor.quickstart.ModuleContainer;
 import uk.co.drnaylor.quickstart.config.ModulesConfigAdapter;
 import uk.co.drnaylor.quickstart.config.SimpleNodeConfigAdapter;
@@ -16,6 +18,17 @@ import uk.co.drnaylor.quickstart.tests.scaffolding.FakeLoaderTests;
 import static org.junit.Assert.assertNotNull;
 
 public class ModuleContainerConstructionTests extends FakeLoaderTests {
+
+    @Rule
+    public ExpectedException expectedException = ExpectedException.none();
+
+    @Test
+    public void testThatNoModulesThrow() throws Exception {
+        expectedException.expect(QuickStartModuleDiscoveryException.class);
+        expectedException.expectMessage("Unable to start QuickStart");
+
+        getContainer("uk.co.drnaylor.quickstart.tests.modules.exceptions.notamodule");
+    }
 
     @Test(expected = QuickStartModuleLoaderException.Construction.class)
     public void testThatUnconstructableModulesThrow() throws QuickStartModuleDiscoveryException, QuickStartModuleLoaderException.Enabling, QuickStartModuleLoaderException.Construction {

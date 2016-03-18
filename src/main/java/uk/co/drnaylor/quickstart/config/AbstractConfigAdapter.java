@@ -55,7 +55,7 @@ public abstract class AbstractConfigAdapter<R> {
     }
 
     /**
-     * Returns whether this adapater has been attached to a config file.
+     * Returns whether this adapter has been attached to a config file.
      *
      * @return <code>true</code> if attached.
      */

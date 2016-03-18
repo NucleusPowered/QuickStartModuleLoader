@@ -63,7 +63,7 @@ public class AbstractAdaptableConfig<N extends ConfigurationNode, T extends Conf
      * @throws NoModuleException If the module has not had a config adapter attached to it.
      * @throws IncorrectAdapterTypeException If the specified {@link Class} is incorrect.
      */
-    public final <R extends AbstractConfigAdapter<N>> R getConfigAdapterForModule(String module, Class<R> adapterClass) throws NoModuleException, IncorrectAdapterTypeException {
+    public final <R extends AbstractConfigAdapter<?>> R getConfigAdapterForModule(String module, Class<R> adapterClass) throws NoModuleException, IncorrectAdapterTypeException {
         if (!moduleConfigAdapters.containsKey(module.toLowerCase())) {
             throw new NoModuleException(module);
         }

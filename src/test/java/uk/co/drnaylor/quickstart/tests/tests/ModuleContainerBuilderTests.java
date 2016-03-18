@@ -2,7 +2,7 @@
  * This file is part of QuickStart Module Loader, licensed under the MIT License (MIT). See the LICENSE.txt file
  * at the root of this project for more details.
  */
-package uk.co.drnaylor.quickstart.tests.container;
+package uk.co.drnaylor.quickstart.tests.tests;
 
 import org.junit.Assert;
 import org.junit.Test;

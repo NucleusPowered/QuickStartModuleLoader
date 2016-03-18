@@ -17,10 +17,7 @@ import uk.co.drnaylor.quickstart.constructors.SimpleModuleConstructor;
 import uk.co.drnaylor.quickstart.enums.ConstructionPhase;
 import uk.co.drnaylor.quickstart.enums.LoadingStatus;
 import uk.co.drnaylor.quickstart.enums.ModulePhase;
-import uk.co.drnaylor.quickstart.exceptions.NoModuleException;
-import uk.co.drnaylor.quickstart.exceptions.QuickStartModuleDiscoveryException;
-import uk.co.drnaylor.quickstart.exceptions.QuickStartModuleLoaderException;
-import uk.co.drnaylor.quickstart.exceptions.UndisableableModuleException;
+import uk.co.drnaylor.quickstart.exceptions.*;
 
 import java.io.IOException;
 import java.text.MessageFormat;
@@ -297,6 +294,11 @@ public final class ModuleContainer {
         }
 
         currentPhase = ConstructionPhase.ENABLED;
+    }
+
+    @SuppressWarnings("unchecked")
+    public final <R extends AbstractConfigAdapter<?>> R getConfigAdapterForModule(String module, Class<R> adapterClass) throws NoModuleException, IncorrectAdapterTypeException {
+        return config.getConfigAdapterForModule(module, adapterClass);
     }
 
     /**

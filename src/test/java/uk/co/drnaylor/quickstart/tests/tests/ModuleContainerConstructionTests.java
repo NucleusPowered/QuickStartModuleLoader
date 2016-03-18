@@ -2,12 +2,16 @@
  * This file is part of QuickStart Module Loader, licensed under the MIT License (MIT). See the LICENSE.txt file
  * at the root of this project for more details.
  */
-package uk.co.drnaylor.quickstart.tests.container;
+package uk.co.drnaylor.quickstart.tests.tests;
 
+import org.junit.Assert;
 import org.junit.Test;
 import uk.co.drnaylor.quickstart.ModuleContainer;
+import uk.co.drnaylor.quickstart.config.ModulesConfigAdapter;
+import uk.co.drnaylor.quickstart.config.SimpleNodeConfigAdapter;
 import uk.co.drnaylor.quickstart.exceptions.QuickStartModuleDiscoveryException;
 import uk.co.drnaylor.quickstart.exceptions.QuickStartModuleLoaderException;
+import uk.co.drnaylor.quickstart.tests.config.adapters.SimpleWithDefault;
 import uk.co.drnaylor.quickstart.tests.scaffolding.FakeLoaderTests;
 
 public class ModuleContainerConstructionTests extends FakeLoaderTests {
@@ -34,5 +38,27 @@ public class ModuleContainerConstructionTests extends FakeLoaderTests {
     @Test
     public void testThatSimpleConfigModuleConstructsAndEnables() throws QuickStartModuleDiscoveryException, QuickStartModuleLoaderException.Enabling, QuickStartModuleLoaderException.Construction {
         getContainer("uk.co.drnaylor.quickstart.tests.modules.simpleconfig").loadModules(true);
+    }
+
+    @Test
+    public void testThatConfigAdaptersGetRegisteredOnConstruction() throws Exception {
+        // When we load these modules...
+        ModuleContainer mc = getContainer("uk.co.drnaylor.quickstart.tests.modules.adapterstest");
+        mc.loadModules(true);
+
+        // ...test that we get three config adapters.
+        ModulesConfigAdapter mca = mc.getConfigAdapterForModule(ModulesConfigAdapter.modulesKey, ModulesConfigAdapter.class);
+        SimpleNodeConfigAdapter s = mc.getConfigAdapterForModule("moduleone", SimpleNodeConfigAdapter.class);
+        SimpleWithDefault s2 = mc.getConfigAdapterForModule("moduletwo", SimpleWithDefault.class);
+    }
+
+    @Test
+    public void testThatMergedDefaultsFromConfigAdapterArePresent() throws Exception {
+        // When we load these modules...
+        ModuleContainer mc = getContainer("uk.co.drnaylor.quickstart.tests.modules.adapterstest");
+        mc.loadModules(true);
+
+        SimpleWithDefault s2 = mc.getConfigAdapterForModule("moduletwo", SimpleWithDefault.class);
+        Assert.assertEquals(s2.getNode().getNode("test").getString(), "test");
     }
 }

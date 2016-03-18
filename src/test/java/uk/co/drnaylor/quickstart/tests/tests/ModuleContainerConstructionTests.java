@@ -4,7 +4,6 @@
  */
 package uk.co.drnaylor.quickstart.tests.tests;
 
-import org.junit.Assert;
 import org.junit.Test;
 import uk.co.drnaylor.quickstart.ModuleContainer;
 import uk.co.drnaylor.quickstart.config.ModulesConfigAdapter;
@@ -13,6 +12,9 @@ import uk.co.drnaylor.quickstart.exceptions.QuickStartModuleDiscoveryException;
 import uk.co.drnaylor.quickstart.exceptions.QuickStartModuleLoaderException;
 import uk.co.drnaylor.quickstart.tests.config.adapters.SimpleWithDefault;
 import uk.co.drnaylor.quickstart.tests.scaffolding.FakeLoaderTests;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 
 public class ModuleContainerConstructionTests extends FakeLoaderTests {
 
@@ -50,6 +52,10 @@ public class ModuleContainerConstructionTests extends FakeLoaderTests {
         ModulesConfigAdapter mca = mc.getConfigAdapterForModule(ModulesConfigAdapter.modulesKey, ModulesConfigAdapter.class);
         SimpleNodeConfigAdapter s = mc.getConfigAdapterForModule("moduleone", SimpleNodeConfigAdapter.class);
         SimpleWithDefault s2 = mc.getConfigAdapterForModule("moduletwo", SimpleWithDefault.class);
+
+        assertNotNull(mca);
+        assertNotNull(s);
+        assertNotNull(s2);
     }
 
     @Test
@@ -59,6 +65,6 @@ public class ModuleContainerConstructionTests extends FakeLoaderTests {
         mc.loadModules(true);
 
         SimpleWithDefault s2 = mc.getConfigAdapterForModule("moduletwo", SimpleWithDefault.class);
-        Assert.assertEquals(s2.getNode().getNode("test").getString(), "test");
+        assertEquals(s2.getNode().getNode("test").getString(), "test");
     }
 }

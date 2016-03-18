@@ -142,12 +142,11 @@ public final class ModuleContainer {
 
         // Attaches config adapter and loads in the defaults.
         config.attachModulesConfig(m);
+        config.saveAdapterDefaults();
 
         // Load what we have in config into our discovered modules.
         try {
-            config.getConfigAdapter().getNode().forEach((k, v) -> {
-                discoveredModules.get(k).setStatus(v);
-            });
+            config.getConfigAdapter().getNode().forEach((k, v) -> discoveredModules.get(k).setStatus(v));
         } catch (ObjectMappingException e) {
             Logger.getLogger("QuickStart").warning("Could not load modules config, falling back to defaults.");
             e.printStackTrace();
@@ -291,6 +290,12 @@ public final class ModuleContainer {
         if (c.isEmpty()) {
             currentPhase = ConstructionPhase.ERRORED;
             throw new QuickStartModuleLoaderException.Enabling(null, "No modules were enabled.", null);
+        }
+
+        try {
+            config.saveAdapterDefaults();
+        } catch (IOException e) {
+            e.printStackTrace();
         }
 
         currentPhase = ConstructionPhase.ENABLED;

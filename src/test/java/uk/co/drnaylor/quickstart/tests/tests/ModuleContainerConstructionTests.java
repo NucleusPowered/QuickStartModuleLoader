@@ -13,14 +13,9 @@ import uk.co.drnaylor.quickstart.exceptions.QuickStartModuleLoaderException;
 import uk.co.drnaylor.quickstart.tests.config.adapters.SimpleWithDefault;
 import uk.co.drnaylor.quickstart.tests.scaffolding.FakeLoaderTests;
 
-import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
 public class ModuleContainerConstructionTests extends FakeLoaderTests {
-
-    private ModuleContainer getContainer(String p) throws QuickStartModuleDiscoveryException {
-        return ModuleContainer.builder().setConfigurationLoader(loader).setPackageToScan(p).build();
-    }
 
     @Test(expected = QuickStartModuleLoaderException.Construction.class)
     public void testThatUnconstructableModulesThrow() throws QuickStartModuleDiscoveryException, QuickStartModuleLoaderException.Enabling, QuickStartModuleLoaderException.Construction {
@@ -56,15 +51,5 @@ public class ModuleContainerConstructionTests extends FakeLoaderTests {
         assertNotNull(mca);
         assertNotNull(s);
         assertNotNull(s2);
-    }
-
-    @Test
-    public void testThatMergedDefaultsFromConfigAdapterArePresent() throws Exception {
-        // When we load these modules...
-        ModuleContainer mc = getContainer("uk.co.drnaylor.quickstart.tests.modules.adapterstest");
-        mc.loadModules(true);
-
-        SimpleWithDefault s2 = mc.getConfigAdapterForModule("moduletwo", SimpleWithDefault.class);
-        assertEquals(s2.getNode().getNode("test").getString(), "test");
     }
 }

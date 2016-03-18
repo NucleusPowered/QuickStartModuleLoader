@@ -91,9 +91,13 @@ public class AbstractAdaptableConfig<N extends ConfigurationNode, T extends Conf
             throw new IllegalArgumentException();
         }
 
-        configAdapter.attachConfig(module.toLowerCase(), this, () -> node.getNode(module.toLowerCase()), n -> node.setValue(n), nodeCreator);
+        configAdapter.attachConfig(
+                module.toLowerCase(),
+                this,
+                () -> nodeCreator.get().setValue(node.getNode(module.toLowerCase())),
+                n -> node.getNode(module.toLowerCase()).setValue(n),
+                nodeCreator);
         moduleConfigAdapters.put(module.toLowerCase(), configAdapter);
-        saveAdapterDefaults();
     }
 
     /**
@@ -105,9 +109,19 @@ public class AbstractAdaptableConfig<N extends ConfigurationNode, T extends Conf
         loader.save(node);
     }
 
-    protected void saveAdapterDefaults() throws IOException {
+    public void saveAdapterDefaults() throws IOException {
         CommentedConfigurationNode n = SimpleCommentedConfigurationNode.root();
-        moduleConfigAdapters.forEach((k, v) -> n.getNode(k.toLowerCase()).setValue(v.getDefaults()));
+        moduleConfigAdapters.forEach((k, v) -> {
+            // Configurate does something I wasn't expecting. If we set a single value with a key on a node, it seems
+            // to be set as the root - which causes havoc! So, we get the parent if it exists, because that's the
+            // actual null node we're interested in.
+            ConfigurationNode cn = v.getDefaults();
+            if (cn.getParent() != null) {
+                cn = cn.getParent();
+            }
+
+            n.getNode(k.toLowerCase()).setValue(cn);
+        });
 
         node.mergeValuesFrom(n);
         save();

@@ -4,6 +4,7 @@ plugins {
     id 'eclipse'
     id 'com.github.hierynomus.license' version '0.12.1'
     id 'net.ellune.blossom' version '1.0.1'
+    id 'maven'
 }
 
 ext.url = 'http://qsml.dualspiral.co.uk'

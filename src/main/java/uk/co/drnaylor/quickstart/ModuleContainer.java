@@ -316,6 +316,15 @@ public final class ModuleContainer {
     }
 
     /**
+     * Reloads the {@link SystemConfig}, but does not change any module status.
+     *
+     * @throws IOException If the config could not be reloaded.
+     */
+    public final void reloadSystemConfig() throws IOException {
+        config.load();
+    }
+
+    /**
      * Builder class to create a {@link ModuleContainer}
      */
     public static class Builder {

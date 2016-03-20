@@ -7,11 +7,14 @@ package uk.co.drnaylor.quickstart;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Maps;
 import com.google.common.reflect.ClassPath;
+import com.google.common.reflect.TypeToken;
 import ninja.leaping.configurate.ConfigurationNode;
 import ninja.leaping.configurate.loader.ConfigurationLoader;
 import ninja.leaping.configurate.objectmapping.ObjectMappingException;
+import ninja.leaping.configurate.objectmapping.serialize.TypeSerializers;
 import uk.co.drnaylor.quickstart.annotations.ModuleData;
 import uk.co.drnaylor.quickstart.config.AbstractConfigAdapter;
+import uk.co.drnaylor.quickstart.config.LoadingStatusTypeSerializer;
 import uk.co.drnaylor.quickstart.constructors.ModuleConstructor;
 import uk.co.drnaylor.quickstart.constructors.SimpleModuleConstructor;
 import uk.co.drnaylor.quickstart.enums.ConstructionPhase;
@@ -397,7 +400,10 @@ public final class ModuleContainer {
                 classLoader = getClass().getClassLoader();
             }
 
-            Metadata.getStartupMessage().ifPresent(x -> Logger.getLogger("QuickStart").info(x));
+            Metadata.getStartupMessage().ifPresent(x -> {
+                Logger.getLogger("QuickStart").info(x);
+                TypeSerializers.getDefaultSerializers().registerType(TypeToken.of(LoadingStatus.class), new LoadingStatusTypeSerializer());
+            });
             return new ModuleContainer(configurationLoader, classLoader, packageToScan, constructor);
         }
     }

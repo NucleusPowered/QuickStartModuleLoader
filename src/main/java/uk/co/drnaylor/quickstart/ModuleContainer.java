@@ -259,6 +259,22 @@ public final class ModuleContainer {
             throw new QuickStartModuleLoaderException.Construction(null, "No modules were constructed.", null);
         }
 
+        // Enter Config Adapter phase - attaching before enabling so that enable methods can get any associated configurations.
+        for (String s : modules.keySet()) {
+            Module m = modules.get(s);
+            Optional<AbstractConfigAdapter<?>> a = m.getConfigAdapter();
+            if (a.isPresent()) {
+                try {
+                    config.attachConfigAdapter(s, a.get());
+                } catch (IOException e) {
+                    e.printStackTrace();
+                    if (failOnOneError) {
+                        throw new QuickStartModuleLoaderException.Enabling(m.getClass(), "Failed to attach config.", e);
+                    }
+                }
+            }
+        }
+
         // Enter Enable phase.
         Map<String, Module> c = new HashMap<>(modules);
         for (String s : c.keySet()) {
@@ -267,18 +283,6 @@ public final class ModuleContainer {
             try {
                 Module m = modules.get(s);
                 constructor.enableModule(m);
-                Optional<AbstractConfigAdapter<?>> a = m.getConfigAdapter();
-                if (a.isPresent()) {
-                    try {
-                        config.attachConfigAdapter(s, a.get());
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                        if (failOnOneError) {
-                            throw new QuickStartModuleLoaderException.Enabling(m.getClass(), "Failed to attach config.", e);
-                        }
-                    }
-                }
-
                 ms.setPhase(ModulePhase.ENABLED);
             } catch (Exception construction) {
                 construction.printStackTrace();

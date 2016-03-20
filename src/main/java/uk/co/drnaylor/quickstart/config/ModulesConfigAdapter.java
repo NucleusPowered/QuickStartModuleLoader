@@ -11,6 +11,7 @@ import ninja.leaping.configurate.objectmapping.ObjectMappingException;
 import uk.co.drnaylor.quickstart.enums.LoadingStatus;
 
 import java.util.HashMap;
+import java.util.logging.Logger;
 
 /**
  * Configuration adapter that handles the module statuses.
@@ -42,7 +43,7 @@ public final class ModulesConfigAdapter extends AbstractConfigAdapter<HashMap<St
         try {
             value = node.getValue(new TypeToken<HashMap<String, LoadingStatus>>() {});
         } catch (ObjectMappingException e) {
-            e.printStackTrace();
+            Logger.getLogger("QuickStart").warning(e.getMessage());
         }
 
         if (value == null) {

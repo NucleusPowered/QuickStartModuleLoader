@@ -19,6 +19,7 @@ import uk.co.drnaylor.quickstart.exceptions.NoModuleException;
 import uk.co.drnaylor.quickstart.tests.scaffolding.FakeLoaderTests;
 
 import java.lang.reflect.Constructor;
+import java.util.HashMap;
 import java.util.Map;
 
 public class ModuleConfigurationAdapterTests extends FakeLoaderTests {
@@ -34,7 +35,7 @@ public class ModuleConfigurationAdapterTests extends FakeLoaderTests {
         ctor.setAccessible(true);
         config = (SystemConfig<ConfigurationNode, ConfigurationLoader<ConfigurationNode>>) ctor.newInstance(loader);
 
-        Map<String, LoadingStatus> m = Maps.newHashMap();
+        HashMap<String, LoadingStatus> m = Maps.newHashMap();
         m.put("d", LoadingStatus.DISABLED);
         m.put("e", LoadingStatus.ENABLED);
         m.put("f", LoadingStatus.FORCELOAD);

@@ -13,6 +13,7 @@ import uk.co.drnaylor.quickstart.config.ModulesConfigAdapter;
 import uk.co.drnaylor.quickstart.enums.LoadingStatus;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -31,7 +32,7 @@ public final class SystemConfig<N extends ConfigurationNode, T extends Configura
         Preconditions.checkNotNull(defaults);
         Preconditions.checkState(configAdapter == null);
 
-        configAdapter = new ModulesConfigAdapter(defaults);
+        configAdapter = new ModulesConfigAdapter(new HashMap<>(defaults));
         this.attachConfigAdapter(modulesNode, configAdapter);
     }
 

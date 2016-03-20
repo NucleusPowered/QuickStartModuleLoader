@@ -4,25 +4,25 @@
  */
 package uk.co.drnaylor.quickstart.config;
 
-import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Maps;
 import com.google.common.reflect.TypeToken;
 import ninja.leaping.configurate.ConfigurationNode;
 import ninja.leaping.configurate.objectmapping.ObjectMappingException;
 import uk.co.drnaylor.quickstart.enums.LoadingStatus;
 
 import java.util.HashMap;
-import java.util.Map;
 
 /**
  * Configuration adapter that handles the module statuses.
  */
-public final class ModulesConfigAdapter extends AbstractConfigAdapter<Map<String, LoadingStatus>> {
+public final class ModulesConfigAdapter extends AbstractConfigAdapter<HashMap<String, LoadingStatus>> {
 
     public static final String modulesKey = "modules";
 
-    private final Map<String, LoadingStatus> defaults;
+    private final TypeToken<HashMap<String, LoadingStatus>> tt = new TypeToken<HashMap<String, LoadingStatus>>() {};
+    private final HashMap<String, LoadingStatus> defaults;
 
-    public ModulesConfigAdapter(Map<String, LoadingStatus> defaults) {
+    public ModulesConfigAdapter(HashMap<String, LoadingStatus> defaults) {
         this.defaults = defaults;
     }
 
@@ -33,7 +33,7 @@ public final class ModulesConfigAdapter extends AbstractConfigAdapter<Map<String
     }
 
     @Override
-    protected Map<String, LoadingStatus> convertFromConfigurateNode(ConfigurationNode node) {
+    protected HashMap<String, LoadingStatus> convertFromConfigurateNode(ConfigurationNode node) {
         HashMap<String, LoadingStatus> value = null;
         try {
             value = node.getValue(new TypeToken<HashMap<String, LoadingStatus>>() {});
@@ -42,7 +42,7 @@ public final class ModulesConfigAdapter extends AbstractConfigAdapter<Map<String
         }
 
         if (value == null) {
-            return ImmutableMap.copyOf(defaults);
+            return Maps.newHashMap(defaults);
         }
 
         return value;
@@ -50,7 +50,7 @@ public final class ModulesConfigAdapter extends AbstractConfigAdapter<Map<String
 
     @Override
     @SuppressWarnings("unchecked")
-    protected ConfigurationNode insertIntoConfigurateNode(Map<String, LoadingStatus> data) {
-        return this.getNewNode().setValue(data);
+    protected ConfigurationNode insertIntoConfigurateNode(HashMap<String, LoadingStatus> data) throws ObjectMappingException {
+        return this.getNewNode().setValue(tt, data);
     }
 }

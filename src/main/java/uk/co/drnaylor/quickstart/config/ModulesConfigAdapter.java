@@ -29,7 +29,11 @@ public final class ModulesConfigAdapter extends AbstractConfigAdapter<HashMap<St
     @Override
     @SuppressWarnings("unchecked")
     protected ConfigurationNode generateDefaults(ConfigurationNode node) {
-        return node.setValue(defaults);
+        try {
+            return node.setValue(tt, defaults);
+        } catch (ObjectMappingException e) {
+            return node;
+        }
     }
 
     @Override

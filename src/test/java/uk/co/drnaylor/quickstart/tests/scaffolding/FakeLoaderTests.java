@@ -5,6 +5,7 @@
 package uk.co.drnaylor.quickstart.tests.scaffolding;
 
 import ninja.leaping.configurate.ConfigurationNode;
+import ninja.leaping.configurate.ConfigurationOptions;
 import ninja.leaping.configurate.SimpleConfigurationNode;
 import ninja.leaping.configurate.loader.ConfigurationLoader;
 import org.junit.Before;
@@ -25,6 +26,7 @@ public class FakeLoaderTests {
         loader = (ConfigurationLoader<ConfigurationNode>)mock(ConfigurationLoader.class);
         when(loader.createEmptyNode()).thenReturn(SimpleConfigurationNode.root());
         when(loader.load()).thenReturn(n);
+        when(loader.getDefaultOptions()).thenReturn(ConfigurationOptions.defaults());
     }
 
     protected ModuleContainer getContainer(String p) throws QuickStartModuleDiscoveryException {

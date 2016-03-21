@@ -22,17 +22,20 @@ import java.util.Map;
 public final class SystemConfig<N extends ConfigurationNode, T extends ConfigurationLoader<N>> extends AbstractAdaptableConfig<N, T> {
 
     private final String modulesNode = "modules";
+    private final LoggerProxy proxy;
     private ModulesConfigAdapter configAdapter;
 
-    SystemConfig(T loader) throws IOException {
+    SystemConfig(T loader, LoggerProxy proxy) throws IOException {
         super(loader);
+        this.proxy = proxy;
     }
 
     void attachModulesConfig(Map<String, LoadingStatus> defaults) throws IOException {
         Preconditions.checkNotNull(defaults);
         Preconditions.checkState(configAdapter == null);
 
-        configAdapter = new ModulesConfigAdapter(new HashMap<>(defaults));
+        HashMap<String, LoadingStatus> h = new HashMap<>(defaults);
+        configAdapter = new ModulesConfigAdapter(h, proxy);
         this.attachConfigAdapter(modulesNode, configAdapter);
     }
 

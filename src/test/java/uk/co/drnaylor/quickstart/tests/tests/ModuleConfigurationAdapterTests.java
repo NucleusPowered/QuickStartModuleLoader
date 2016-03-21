@@ -11,6 +11,7 @@ import ninja.leaping.configurate.objectmapping.ObjectMappingException;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import uk.co.drnaylor.quickstart.DefaultLogger;
 import uk.co.drnaylor.quickstart.SystemConfig;
 import uk.co.drnaylor.quickstart.config.ModulesConfigAdapter;
 import uk.co.drnaylor.quickstart.enums.LoadingStatus;
@@ -33,13 +34,13 @@ public class ModuleConfigurationAdapterTests extends FakeLoaderTests {
 
         Constructor<?> ctor = SystemConfig.class.getDeclaredConstructors()[0];
         ctor.setAccessible(true);
-        config = (SystemConfig<ConfigurationNode, ConfigurationLoader<ConfigurationNode>>) ctor.newInstance(loader);
+        config = (SystemConfig<ConfigurationNode, ConfigurationLoader<ConfigurationNode>>) ctor.newInstance(loader, DefaultLogger.INSTANCE);
 
         HashMap<String, LoadingStatus> m = Maps.newHashMap();
         m.put("d", LoadingStatus.DISABLED);
         m.put("e", LoadingStatus.ENABLED);
         m.put("f", LoadingStatus.FORCELOAD);
-        config.attachConfigAdapter(ModulesConfigAdapter.modulesKey, new ModulesConfigAdapter(m));
+        config.attachConfigAdapter(ModulesConfigAdapter.modulesKey, new ModulesConfigAdapter(m, DefaultLogger.INSTANCE));
     }
 
     @Test

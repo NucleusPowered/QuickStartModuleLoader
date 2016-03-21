@@ -8,10 +8,10 @@ import com.google.common.collect.Maps;
 import com.google.common.reflect.TypeToken;
 import ninja.leaping.configurate.ConfigurationNode;
 import ninja.leaping.configurate.objectmapping.ObjectMappingException;
+import uk.co.drnaylor.quickstart.LoggerProxy;
 import uk.co.drnaylor.quickstart.enums.LoadingStatus;
 
 import java.util.HashMap;
-import java.util.logging.Logger;
 
 /**
  * Configuration adapter that handles the module statuses.
@@ -22,9 +22,11 @@ public final class ModulesConfigAdapter extends AbstractConfigAdapter<HashMap<St
 
     private final TypeToken<HashMap<String, LoadingStatus>> tt = new TypeToken<HashMap<String, LoadingStatus>>() {};
     private final HashMap<String, LoadingStatus> defaults;
+    private final LoggerProxy proxy;
 
-    public ModulesConfigAdapter(HashMap<String, LoadingStatus> defaults) {
+    public ModulesConfigAdapter(HashMap<String, LoadingStatus> defaults, LoggerProxy proxy) {
         this.defaults = defaults;
+        this.proxy = proxy;
     }
 
     @Override
@@ -43,7 +45,7 @@ public final class ModulesConfigAdapter extends AbstractConfigAdapter<HashMap<St
         try {
             value = node.getValue(new TypeToken<HashMap<String, LoadingStatus>>() {});
         } catch (ObjectMappingException e) {
-            Logger.getLogger("QuickStart").warning(e.getMessage());
+            proxy.warn(e.getMessage());
         }
 
         if (value == null) {

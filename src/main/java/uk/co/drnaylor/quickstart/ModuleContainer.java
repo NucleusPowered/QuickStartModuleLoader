@@ -25,9 +25,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.function.Consumer;
 import java.util.function.Predicate;
-import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
 /**
@@ -80,17 +78,10 @@ public final class ModuleContainer {
      */
     private final ModuleConstructor constructor;
 
-    private final Consumer<Class<? extends Module>> modulePopulator = s -> {
-        // If we have a module annotation, we are golden.
-        if (s.isAnnotationPresent(ModuleData.class)) {
-            ModuleData md = s.getAnnotation(ModuleData.class);
-            discoveredModules.put(md.id().toLowerCase(), new ModuleSpec(s, md));
-        } else {
-            String id = s.getName().toLowerCase();
-            Logger.getLogger("QuickStart Module Loader").warning(MessageFormat.format("The module {0} does not have a ModuleData annotation associated with it. We're just assuming an ID of {0}.", id));
-            discoveredModules.put(id, new ModuleSpec(s, id, LoadingStatus.ENABLED, false));
-        }
-    };
+    /**
+     * The logger to use.
+     */
+    private final LoggerProxy loggerProxy;
 
     /**
      * Constructs a {@link ModuleContainer} and starts discovery of the modules.
@@ -101,13 +92,14 @@ public final class ModuleContainer {
      *
      * @throws QuickStartModuleDiscoveryException if there is an error starting the Module Container.
      */
-    private <N extends ConfigurationNode> ModuleContainer(ConfigurationLoader<N> configurationLoader, ClassLoader loader, String packageBase, ModuleConstructor constructor) throws QuickStartModuleDiscoveryException {
+    private <N extends ConfigurationNode> ModuleContainer(ConfigurationLoader<N> configurationLoader, ClassLoader loader, String packageBase, ModuleConstructor constructor, LoggerProxy loggerProxy) throws QuickStartModuleDiscoveryException {
 
         try {
-            this.config = new SystemConfig<>(configurationLoader);
+            this.config = new SystemConfig<>(configurationLoader, loggerProxy);
             this.constructor = constructor;
             this.classLoader = loader;
             this.packageLocation = packageBase;
+            this.loggerProxy = loggerProxy;
 
             discoverModules();
         } catch (Exception e) {
@@ -133,7 +125,17 @@ public final class ModuleContainer {
         }
 
         // Put the modules into the discoverer.
-        modules.forEach(modulePopulator);
+        modules.forEach(s -> {
+            // If we have a module annotation, we are golden.
+            if (s.isAnnotationPresent(ModuleData.class)) {
+                ModuleData md = s.getAnnotation(ModuleData.class);
+                discoveredModules.put(md.id().toLowerCase(), new ModuleSpec(s, md));
+            } else {
+                String id = s.getName().toLowerCase();
+                loggerProxy.warn(MessageFormat.format("The module {0} does not have a ModuleData annotation associated with it. We're just assuming an ID of {0}.", id));
+                discoveredModules.put(id, new ModuleSpec(s, id, LoadingStatus.ENABLED, false));
+            }
+        });
 
         // Modules discovered. Create the Module Config adapter.
         Map<String, LoadingStatus> m = discoveredModules.entrySet().stream().filter(x -> !x.getValue().isMandatory())
@@ -149,11 +151,11 @@ public final class ModuleContainer {
                 try {
                     discoveredModules.get(k).setStatus(v);
                 } catch (IllegalStateException ex) {
-                    Logger.getLogger("QuickStart").warning("A mandatory module can't have its status changed by config. Falling back to FORCELOAD for " + k);
+                    loggerProxy.warn("A mandatory module can't have its status changed by config. Falling back to FORCELOAD for " + k);
                 }
             });
         } catch (ObjectMappingException e) {
-            Logger.getLogger("QuickStart").warning("Could not load modules config, falling back to defaults.");
+            loggerProxy.warn("Could not load modules config, falling back to defaults.");
             e.printStackTrace();
         }
 
@@ -246,6 +248,7 @@ public final class ModuleContainer {
             } catch (Exception construction) {
                 construction.printStackTrace();
                 ms.setPhase(ModulePhase.ERRORED);
+                loggerProxy.error("The module " + ms.getModuleClass().getName() + " failed to construct.");
 
                 if (failOnOneError) {
                     currentPhase = ConstructionPhase.ERRORED;
@@ -288,6 +291,7 @@ public final class ModuleContainer {
                 construction.printStackTrace();
                 modules.remove(s);
                 ms.setPhase(ModulePhase.ERRORED);
+                loggerProxy.error("The module " + ms.getModuleClass().getName() + " failed to enable.");
 
                 if (failOnOneError) {
                     currentPhase = ConstructionPhase.ERRORED;
@@ -333,6 +337,7 @@ public final class ModuleContainer {
         private String packageToScan;
         private ModuleConstructor constructor;
         private ClassLoader classLoader;
+        private LoggerProxy loggerProxy;
 
         /**
          * Sets the {@link ConfigurationLoader} that will handle the module loading.
@@ -380,6 +385,17 @@ public final class ModuleContainer {
         }
 
         /**
+         * Sets the {@link LoggerProxy} to use for log messages.
+         *
+         * @param loggerProxy The logger proxy to use.
+         * @return This {@link Builder}, for chaining.
+         */
+        public Builder setLoggerProxy(LoggerProxy loggerProxy) {
+            this.loggerProxy = loggerProxy;
+            return this;
+        }
+
+        /**
          * Builds a {@link ModuleContainer}.
          *
          * @return The {@link ModuleContainer}.
@@ -397,8 +413,12 @@ public final class ModuleContainer {
                 classLoader = getClass().getClassLoader();
             }
 
-            Metadata.getStartupMessage().ifPresent(x -> Logger.getLogger("QuickStart").info(x));
-            return new ModuleContainer(configurationLoader, classLoader, packageToScan, constructor);
+            if (loggerProxy == null) {
+                loggerProxy = DefaultLogger.INSTANCE;
+            }
+
+            Metadata.getStartupMessage().ifPresent(x -> loggerProxy.info(x));
+            return new ModuleContainer(configurationLoader, classLoader, packageToScan, constructor, loggerProxy);
         }
     }
 

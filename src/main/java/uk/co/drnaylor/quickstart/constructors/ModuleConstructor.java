@@ -22,10 +22,26 @@ public interface ModuleConstructor {
     Module constructModule(Class<? extends Module> moduleClass) throws QuickStartModuleLoaderException.Construction;
 
     /**
+     * Prepares modules for being enabled.
+     *
+     * @param module The {@link Module} to enable.
+     * @throws QuickStartModuleLoaderException.Enabling if the module could not be pre-enabled.
+     */
+    default void preEnableModule(Module module) throws QuickStartModuleLoaderException.Enabling {}
+
+    /**
      * Enables the supplied module.
      *
      * @param module The {@link Module} to enable.
      * @throws QuickStartModuleLoaderException.Enabling if the module could not be enabled.
      */
     void enableModule(Module module) throws QuickStartModuleLoaderException.Enabling;
+
+    /**
+     * Performs final tasks for after modules are enabled.
+     *
+     * @param module The {@link Module} to enable.
+     * @throws QuickStartModuleLoaderException.Enabling if the module could not be pre-enabled.
+     */
+    default void postEnableModule(Module module) throws QuickStartModuleLoaderException.Enabling {}
 }

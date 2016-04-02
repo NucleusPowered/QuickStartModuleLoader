@@ -24,7 +24,17 @@ public interface Module {
     }
 
     /**
+     * Runs before the enable phase.
+     */
+    default void preEnable() {}
+
+    /**
      * Runs when the module is enabled.
      */
     void onEnable();
+
+    /**
+     * Runs after the enable phase.
+     */
+    default void postEnable() {}
 }

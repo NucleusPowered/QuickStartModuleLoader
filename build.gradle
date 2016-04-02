@@ -10,7 +10,7 @@ plugins {
 ext.url = 'http://qsml.dualspiral.co.uk'
 
 group 'uk.co.drnaylor'
-version '0.1.1-SNAPSHOT'
+version '0.1.1'
 
 apply plugin: 'net.ellune.blossom'
 

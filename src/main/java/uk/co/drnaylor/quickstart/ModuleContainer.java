@@ -5,7 +5,9 @@
 package uk.co.drnaylor.quickstart;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 import com.google.common.reflect.ClassPath;
 import ninja.leaping.configurate.ConfigurationNode;
 import ninja.leaping.configurate.loader.ConfigurationLoader;
@@ -84,6 +86,11 @@ public final class ModuleContainer {
     private final LoggerProxy loggerProxy;
 
     /**
+     * The classes that were loaded by the module loader.
+     */
+    private final Set<Class<?>> loadedClasses = Sets.newHashSet();
+
+    /**
      * Constructs a {@link ModuleContainer} and starts discovery of the modules.
      *
      * @param configurationLoader The {@link ConfigurationLoader} that contains details of whether the modules should be enabled or not.
@@ -116,8 +123,8 @@ public final class ModuleContainer {
 
         // Get the modules out.
         Set<ClassPath.ClassInfo> ci = ClassPath.from(classLoader).getTopLevelClassesRecursive(packageLocation);
-        Set<Class<? extends Module>> modules = ci.stream().map(ClassPath.ClassInfo::load)
-                .filter(Module.class::isAssignableFrom)
+        loadedClasses.addAll(ci.stream().map(ClassPath.ClassInfo::load).collect(Collectors.toSet()));
+        Set<Class<? extends Module>> modules = loadedClasses.stream().filter(Module.class::isAssignableFrom)
                 .map(x -> (Class<? extends Module>)x.asSubclass(Module.class)).collect(Collectors.toSet());
 
         if (modules.isEmpty()) {
@@ -280,22 +287,30 @@ public final class ModuleContainer {
 
         // Enter Enable phase.
         Map<String, Module> c = new HashMap<>(modules);
-        for (String s : c.keySet()) {
-            ModuleSpec ms = discoveredModules.get(s);
 
-            try {
-                Module m = modules.get(s);
-                constructor.enableModule(m);
-                ms.setPhase(ModulePhase.ENABLED);
-            } catch (Exception construction) {
-                construction.printStackTrace();
-                modules.remove(s);
-                ms.setPhase(ModulePhase.ERRORED);
-                loggerProxy.error("The module " + ms.getModuleClass().getName() + " failed to enable.");
+        for (EnablePhase v : EnablePhase.values()) {
+            loggerProxy.info(String.format("Starting phase: %s", v.name()));
+            for (String s : c.keySet()) {
+                ModuleSpec ms = discoveredModules.get(s);
 
-                if (failOnOneError) {
-                    currentPhase = ConstructionPhase.ERRORED;
-                    throw new QuickStartModuleLoaderException.Enabling(ms.getModuleClass(), "The module " + ms.getModuleClass().getName() + " failed to enable.", construction);
+                try {
+                    Module m = modules.get(s);
+                    v.construct(constructor, m, ms);
+                } catch (Exception construction) {
+                    construction.printStackTrace();
+                    modules.remove(s);
+
+                    if (v != EnablePhase.POSTENABLE) {
+                        ms.setPhase(ModulePhase.ERRORED);
+                        loggerProxy.error("The module " + ms.getModuleClass().getName() + " failed to enable.");
+
+                        if (failOnOneError) {
+                            currentPhase = ConstructionPhase.ERRORED;
+                            throw new QuickStartModuleLoaderException.Enabling(ms.getModuleClass(), "The module " + ms.getModuleClass().getName() + " failed to enable.", construction);
+                        }
+                    } else {
+                        loggerProxy.error("The module " + ms.getModuleClass().getName() + " failed to post-enable.");
+                    }
                 }
             }
         }
@@ -326,6 +341,15 @@ public final class ModuleContainer {
      */
     public final void reloadSystemConfig() throws IOException {
         config.load();
+    }
+
+    /**
+     * Gets the {@link Class}es that were scanned during the module discovery phase.
+     *
+     * @return Gets a {@link Set} of the loaded classes.
+     */
+    public final Set<Class<?>> getLoadedClasses() {
+        return ImmutableSet.copyOf(this.loadedClasses);
     }
 
     /**
@@ -431,6 +455,33 @@ public final class ModuleContainer {
 
         ModuleStatusTristate(Predicate<Map.Entry<String, ModuleSpec>> p) {
             statusPredicate = p;
+        }
+    }
+
+    private interface ConstructPhase {
+
+        void construct(ModuleConstructor constructor, Module module, ModuleSpec ms) throws Exception;
+    }
+
+    private enum EnablePhase implements ConstructPhase {
+        PREENABLE {
+            @Override
+            public void construct(ModuleConstructor constructor, Module module, ModuleSpec ms) throws Exception {
+                constructor.preEnableModule(module);
+            }
+        },
+        ENABLE {
+            @Override
+            public void construct(ModuleConstructor constructor, Module module, ModuleSpec ms) throws Exception {
+                constructor.enableModule(module);
+                ms.setPhase(ModulePhase.ENABLED);
+            }
+        },
+        POSTENABLE {
+            @Override
+            public void construct(ModuleConstructor constructor, Module module, ModuleSpec ms) throws Exception {
+                constructor.postEnableModule(module);
+            }
         }
     }
 }

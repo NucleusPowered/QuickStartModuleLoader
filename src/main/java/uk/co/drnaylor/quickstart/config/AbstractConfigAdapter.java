@@ -52,7 +52,17 @@ public abstract class AbstractConfigAdapter<R> {
         this.nodeGetter = nodeGetter;
         this.nodeSaver = nodeSaver;
         this.nodeCreator = nodeCreator;
+
+        onAttach(module, adapter);
     }
+
+    /**
+     * Runs when the config has been attached.
+     *
+     * @param module The module it has been attached to.
+     * @param adapter The {@link AbstractAdaptableConfig} that it has been attached to.
+     */
+    public void onAttach(String module, AbstractAdaptableConfig<?, ?> adapter) {}
 
     /**
      * Returns whether this adapter has been attached to a config file.

@@ -156,7 +156,12 @@ public final class ModuleContainer {
         try {
             config.getConfigAdapter().getNode().forEach((k, v) -> {
                 try {
-                    discoveredModules.get(k).setStatus(v);
+                    ModuleSpec ms = discoveredModules.get(k);
+                    if (ms != null) {
+                        ms.setStatus(v);
+                    } else {
+                        loggerProxy.warn(String.format("Ignoring module entry %s in the configuration file: module does not exist.", k));
+                    }
                 } catch (IllegalStateException ex) {
                     loggerProxy.warn("A mandatory module can't have its status changed by config. Falling back to FORCELOAD for " + k);
                 }

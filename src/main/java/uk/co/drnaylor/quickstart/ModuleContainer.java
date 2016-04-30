@@ -340,6 +340,15 @@ public final class ModuleContainer {
     }
 
     /**
+     * Saves the {@link SystemConfig}.
+     *
+     * @throws IOException If the config could not be saved.
+     */
+    public final void saveSystemConfig() throws IOException {
+        config.save();
+    }
+
+    /**
      * Reloads the {@link SystemConfig}, but does not change any module status.
      *
      * @throws IOException If the config could not be reloaded.

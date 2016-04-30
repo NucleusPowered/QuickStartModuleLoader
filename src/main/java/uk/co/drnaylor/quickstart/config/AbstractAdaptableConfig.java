@@ -109,6 +109,11 @@ public class AbstractAdaptableConfig<N extends ConfigurationNode, T extends Conf
         loader.save(node);
     }
 
+    /**
+     * Saves default values from the adapter to the config file.
+     *
+     * @throws IOException Thrown if the configuration could not be saved.
+     */
     public void saveAdapterDefaults() throws IOException {
         CommentedConfigurationNode n = SimpleCommentedConfigurationNode.root();
         moduleConfigAdapters.forEach((k, v) -> {

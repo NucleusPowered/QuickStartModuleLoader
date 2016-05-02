@@ -91,6 +91,21 @@ public final class ModuleContainer {
     private final Set<Class<?>> loadedClasses = Sets.newHashSet();
 
     /**
+     * Fires when the PREENABLE phase starts.
+     */
+    private final Procedure onPreEnable;
+
+    /**
+     * Fires when the ENABLE phase starts.
+     */
+    private final Procedure onEnable;
+
+    /**
+     * Fires when the POSTENABLE phase starts.
+     */
+    private final Procedure onPostEnable;
+
+    /**
      * Constructs a {@link ModuleContainer} and starts discovery of the modules.
      *
      * @param configurationLoader The {@link ConfigurationLoader} that contains details of whether the modules should be enabled or not.
@@ -99,7 +114,9 @@ public final class ModuleContainer {
      *
      * @throws QuickStartModuleDiscoveryException if there is an error starting the Module Container.
      */
-    private <N extends ConfigurationNode> ModuleContainer(ConfigurationLoader<N> configurationLoader, ClassLoader loader, String packageBase, ModuleConstructor constructor, LoggerProxy loggerProxy) throws QuickStartModuleDiscoveryException {
+    private <N extends ConfigurationNode> ModuleContainer(ConfigurationLoader<N> configurationLoader, ClassLoader loader,
+                                                          String packageBase, ModuleConstructor constructor, LoggerProxy loggerProxy,
+                                                          Procedure onPreEnable, Procedure onEnable, Procedure onPostEnable) throws QuickStartModuleDiscoveryException {
 
         try {
             this.config = new SystemConfig<>(configurationLoader, loggerProxy);
@@ -107,6 +124,9 @@ public final class ModuleContainer {
             this.classLoader = loader;
             this.packageLocation = packageBase;
             this.loggerProxy = loggerProxy;
+            this.onPreEnable = onPreEnable;
+            this.onPostEnable = onPostEnable;
+            this.onEnable = onEnable;
 
             discoverModules();
         } catch (Exception e) {
@@ -295,6 +315,7 @@ public final class ModuleContainer {
 
         for (EnablePhase v : EnablePhase.values()) {
             loggerProxy.info(String.format("Starting phase: %s", v.name()));
+            v.onStart(this);
             for (String s : c.keySet()) {
                 ModuleSpec ms = discoveredModules.get(s);
 
@@ -376,6 +397,9 @@ public final class ModuleContainer {
         private ModuleConstructor constructor;
         private ClassLoader classLoader;
         private LoggerProxy loggerProxy;
+        private Procedure onPreEnable = () -> {};
+        private Procedure onEnable = () -> {};
+        private Procedure onPostEnable = () -> {};
 
         /**
          * Sets the {@link ConfigurationLoader} that will handle the module loading.
@@ -434,6 +458,42 @@ public final class ModuleContainer {
         }
 
         /**
+         * Sets the {@link Procedure} to run when the pre-enable phase is about to start.
+         *
+         * @param onPreEnable The {@link Procedure}
+         * @return This {@link Builder}, for chaining.
+         */
+        public Builder setOnPreEnable(Procedure onPreEnable) {
+            Preconditions.checkNotNull(onPreEnable);
+            this.onPreEnable = onPreEnable;
+            return this;
+        }
+
+        /**
+         * Sets the {@link Procedure} to run when the enable phase is about to start.
+         *
+         * @param onEnable The {@link Procedure}
+         * @return This {@link Builder}, for chaining.
+         */
+        public Builder setOnEnable(Procedure onEnable) {
+            Preconditions.checkNotNull(onEnable);
+            this.onEnable = onEnable;
+            return this;
+        }
+
+        /**
+         * Sets the {@link Procedure} to run when the post-enable phase is about to start.
+         *
+         * @param onPostEnable The {@link Procedure}
+         * @return This {@link Builder}, for chaining.
+         */
+        public Builder setOnPostEnable(Procedure onPostEnable) {
+            Preconditions.checkNotNull(onPostEnable);
+            this.onPostEnable = onPostEnable;
+            return this;
+        }
+
+        /**
          * Builds a {@link ModuleContainer}.
          *
          * @return The {@link ModuleContainer}.
@@ -456,7 +516,8 @@ public final class ModuleContainer {
             }
 
             Metadata.getStartupMessage().ifPresent(x -> loggerProxy.info(x));
-            return new ModuleContainer(configurationLoader, classLoader, packageToScan, constructor, loggerProxy);
+            return new ModuleContainer(configurationLoader, classLoader, packageToScan, constructor, loggerProxy,
+                    onPreEnable, onEnable, onPostEnable);
         }
     }
 
@@ -474,11 +535,18 @@ public final class ModuleContainer {
 
     private interface ConstructPhase {
 
+        void onStart(ModuleContainer container);
+
         void construct(ModuleConstructor constructor, Module module, ModuleSpec ms) throws Exception;
     }
 
     private enum EnablePhase implements ConstructPhase {
         PREENABLE {
+            @Override
+            public void onStart(ModuleContainer container) {
+                container.onPreEnable.invoke();
+            }
+
             @Override
             public void construct(ModuleConstructor constructor, Module module, ModuleSpec ms) throws Exception {
                 constructor.preEnableModule(module);
@@ -486,12 +554,22 @@ public final class ModuleContainer {
         },
         ENABLE {
             @Override
+            public void onStart(ModuleContainer container) {
+                container.onEnable.invoke();
+            }
+
+            @Override
             public void construct(ModuleConstructor constructor, Module module, ModuleSpec ms) throws Exception {
                 constructor.enableModule(module);
                 ms.setPhase(ModulePhase.ENABLED);
             }
         },
         POSTENABLE {
+            @Override
+            public void onStart(ModuleContainer container) {
+                container.onPostEnable.invoke();
+            }
+
             @Override
             public void construct(ModuleConstructor constructor, Module module, ModuleSpec ms) throws Exception {
                 constructor.postEnableModule(module);

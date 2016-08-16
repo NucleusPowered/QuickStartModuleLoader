@@ -12,7 +12,7 @@ import uk.co.drnaylor.quickstart.enums.ModulePhase;
 /**
  * Internal specification of a module.
  */
-final class ModuleSpec {
+public final class ModuleSpec {
 
     private final Class<? extends Module> moduleClass;
     private final String name;
@@ -20,11 +20,11 @@ final class ModuleSpec {
     private final boolean isMandatory;
     private ModulePhase phase = ModulePhase.DISCOVERED;
 
-    ModuleSpec(Class<? extends Module> moduleClass, ModuleData data) {
+    public ModuleSpec(Class<? extends Module> moduleClass, ModuleData data) {
         this(moduleClass, data.name(), data.status(), data.isRequired());
     }
 
-    ModuleSpec(Class<? extends Module> moduleClass, String name, LoadingStatus status, boolean isMandatory) {
+    public  ModuleSpec(Class<? extends Module> moduleClass, String name, LoadingStatus status, boolean isMandatory) {
         Preconditions.checkNotNull(moduleClass);
         Preconditions.checkNotNull(name);
         Preconditions.checkNotNull(status);

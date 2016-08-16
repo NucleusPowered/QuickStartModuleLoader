@@ -8,6 +8,7 @@ import org.junit.Assert;
 import org.junit.Test;
 import uk.co.drnaylor.quickstart.ModuleContainer;
 import uk.co.drnaylor.quickstart.exceptions.QuickStartModuleDiscoveryException;
+import uk.co.drnaylor.quickstart.modulecontainers.DiscoveryModuleContainer;
 import uk.co.drnaylor.quickstart.tests.modules.nontest.FakeModule;
 import uk.co.drnaylor.quickstart.tests.scaffolding.FakeLoaderTests;
 
@@ -23,7 +24,7 @@ public class ModuleContainerBuilderTests extends FakeLoaderTests {
     @Test(expected = NullPointerException.class)
     public void testThatBuilderRequiresPackage() throws Exception {
         // Given this Builder...
-        ModuleContainer.Builder builder = ModuleContainer.builder();
+        DiscoveryModuleContainer.Builder builder = DiscoveryModuleContainer.builder();
 
         // When we provide no parameters and build it, then should throw an exception.
         builder.build();
@@ -36,7 +37,7 @@ public class ModuleContainerBuilderTests extends FakeLoaderTests {
     @Test(expected = NullPointerException.class)
     public void testThatBuilderRequiresConfigurationLoader() throws Exception {
         // Given this Builder
-        ModuleContainer.Builder builder = ModuleContainer.builder();
+        DiscoveryModuleContainer.Builder builder = DiscoveryModuleContainer.builder();
 
         // and this package...
         builder.setPackageToScan(FakeModule.packageName());
@@ -53,7 +54,7 @@ public class ModuleContainerBuilderTests extends FakeLoaderTests {
     @Test
     public void testThatBuilderProvidesModuleContainer() throws QuickStartModuleDiscoveryException {
         // Given this Builder
-        ModuleContainer.Builder builder = ModuleContainer.builder();
+        DiscoveryModuleContainer.Builder builder = DiscoveryModuleContainer.builder();
 
         // and this package...
         builder.setPackageToScan(FakeModule.packageName()).setConfigurationLoader(loader);

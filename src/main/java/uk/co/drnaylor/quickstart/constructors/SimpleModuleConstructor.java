@@ -28,13 +28,4 @@ public class SimpleModuleConstructor implements ModuleConstructor {
             throw new QuickStartModuleLoaderException.Construction(moduleClass, "Unable to construct the module: " + moduleClass.getName(), e);
         }
     }
-
-    @Override
-    public void enableModule(Module module) throws QuickStartModuleLoaderException.Enabling {
-        try {
-            module.onEnable();
-        } catch (Exception e) {
-            throw new QuickStartModuleLoaderException.Enabling(module.getClass(), "Unable to enable the module: " + module.getClass().getName(), e);
-        }
-    }
 }

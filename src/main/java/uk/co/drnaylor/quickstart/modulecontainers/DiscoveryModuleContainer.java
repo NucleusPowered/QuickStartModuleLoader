@@ -78,7 +78,7 @@ public class DiscoveryModuleContainer extends ModuleContainer {
      * Starts discovery of modules.
      */
     @Override
-    protected void discoverModules() throws Exception {
+    protected Set<Class<? extends Module>> discoverModules() throws Exception {
         // Get the modules out.
         Set<ClassPath.ClassInfo> ci = ClassPath.from(classLoader).getTopLevelClassesRecursive(packageLocation);
         loadedClasses.addAll(ci.stream().map(ClassPath.ClassInfo::load).collect(Collectors.toSet()));
@@ -89,18 +89,7 @@ public class DiscoveryModuleContainer extends ModuleContainer {
             throw new QuickStartModuleDiscoveryException("No modules were found", null);
         }
 
-        // Put the modules into the discoverer.
-        modules.forEach(s -> {
-            // If we have a module annotation, we are golden.
-            if (s.isAnnotationPresent(ModuleData.class)) {
-                ModuleData md = s.getAnnotation(ModuleData.class);
-                discoveredModules.put(md.id().toLowerCase(), new ModuleSpec(s, md));
-            } else {
-                String id = s.getName().toLowerCase();
-                loggerProxy.warn(MessageFormat.format("The module {0} does not have a ModuleData annotation associated with it. We're just assuming an ID of {0}.", id));
-                discoveredModules.put(id, new ModuleSpec(s, id, LoadingStatus.ENABLED, false));
-            }
-        });
+        return modules;
     }
 
     @Override

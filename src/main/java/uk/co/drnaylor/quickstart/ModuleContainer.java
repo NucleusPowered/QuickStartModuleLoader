@@ -9,6 +9,7 @@ import com.google.common.collect.Maps;
 import ninja.leaping.configurate.ConfigurationNode;
 import ninja.leaping.configurate.loader.ConfigurationLoader;
 import ninja.leaping.configurate.objectmapping.ObjectMappingException;
+import uk.co.drnaylor.quickstart.annotations.ModuleData;
 import uk.co.drnaylor.quickstart.config.AbstractConfigAdapter;
 import uk.co.drnaylor.quickstart.enums.ConstructionPhase;
 import uk.co.drnaylor.quickstart.enums.LoadingStatus;
@@ -17,6 +18,7 @@ import uk.co.drnaylor.quickstart.exceptions.*;
 import uk.co.drnaylor.quickstart.loaders.ModuleEnabler;
 
 import java.io.IOException;
+import java.text.MessageFormat;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -78,7 +80,13 @@ public abstract class ModuleContainer {
     /**
      * Constructs a {@link ModuleContainer} and starts discovery of the modules.
      *
+     * @param <N>                 The type of {@link ConfigurationNode} to use.
      * @param configurationLoader The {@link ConfigurationLoader} that contains details of whether the modules should be enabled or not.
+     * @param moduleEnabler       The {@link ModuleEnabler} that contains the logic to enable modules.
+     * @param loggerProxy         The {@link LoggerProxy} that contains methods to send messages to the logger, or any other source.
+     * @param onPreEnable         The {@link Procedure} to run on pre enable, before modules are pre-enabled.
+     * @param onEnable            The {@link Procedure} to run on enable, before modules are pre-enabled.
+     * @param onPostEnable        The {@link Procedure} to run on post enable, before modules are pre-enabled.
      *
      * @throws QuickStartModuleDiscoveryException if there is an error starting the Module Container.
      */
@@ -106,7 +114,18 @@ public abstract class ModuleContainer {
             Preconditions.checkState(currentPhase == ConstructionPhase.INITALISED);
             currentPhase = ConstructionPhase.DISCOVERING;
 
-            discoverModules();
+            Set<Class<? extends Module>> modules = discoverModules();
+            modules.forEach(s -> {
+                // If we have a module annotation, we are golden.
+                if (s.isAnnotationPresent(ModuleData.class)) {
+                    ModuleData md = s.getAnnotation(ModuleData.class);
+                    discoveredModules.put(md.id().toLowerCase(), new ModuleSpec(s, md));
+                } else {
+                    String id = s.getClass().getName().toLowerCase();
+                    loggerProxy.warn(MessageFormat.format("The module {0} does not have a ModuleData annotation associated with it. We're just assuming an ID of {0}.", id));
+                    discoveredModules.put(id, new ModuleSpec(s, id, LoadingStatus.ENABLED, false));
+                }
+            });
 
             // Modules discovered. Create the Module Config adapter.
             Map<String, LoadingStatus> m = discoveredModules.entrySet().stream().filter(x -> !x.getValue().isMandatory())
@@ -142,7 +161,7 @@ public abstract class ModuleContainer {
         }
     }
 
-    protected abstract void discoverModules() throws Exception;
+    protected abstract Set<Class<? extends Module>> discoverModules() throws Exception;
 
     /**
      * Gets the current phase of the module loader.

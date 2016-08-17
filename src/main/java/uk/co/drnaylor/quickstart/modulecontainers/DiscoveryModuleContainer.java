@@ -4,7 +4,6 @@
  */
 package uk.co.drnaylor.quickstart.modulecontainers;
 
-
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
@@ -13,10 +12,11 @@ import ninja.leaping.configurate.ConfigurationNode;
 import ninja.leaping.configurate.loader.ConfigurationLoader;
 import uk.co.drnaylor.quickstart.*;
 import uk.co.drnaylor.quickstart.annotations.ModuleData;
-import uk.co.drnaylor.quickstart.constructors.ModuleConstructor;
-import uk.co.drnaylor.quickstart.constructors.SimpleModuleConstructor;
+import uk.co.drnaylor.quickstart.loaders.ModuleConstructor;
+import uk.co.drnaylor.quickstart.loaders.SimpleModuleConstructor;
 import uk.co.drnaylor.quickstart.enums.LoadingStatus;
 import uk.co.drnaylor.quickstart.exceptions.QuickStartModuleDiscoveryException;
+import uk.co.drnaylor.quickstart.loaders.ModuleEnabler;
 
 import java.text.MessageFormat;
 import java.util.Set;
@@ -60,14 +60,15 @@ public class DiscoveryModuleContainer extends ModuleContainer {
      * @param loader              The {@link ClassLoader} that contains the classpath in which the modules are located.
      * @param packageBase         The root name of the package to scan for modules.
      * @param constructor         The {@link ModuleConstructor} that contains the logic to construct modules.
+     * @param enabler             The {@link ModuleEnabler} that contains the logic to enable modules.
      * @param loggerProxy         The {@link LoggerProxy} that contains methods to send messages to the logger, or any other source.
      * @param onPreEnable         The {@link Procedure} to run on pre enable, before modules are pre-enabled.
      * @param onEnable            The {@link Procedure} to run on enable, before modules are pre-enabled.
      * @param onPostEnable        The {@link Procedure} to run on post enable, before modules are pre-enabled.
      * @throws QuickStartModuleDiscoveryException if there is an error starting the Module Container.
      */
-    private <N extends ConfigurationNode> DiscoveryModuleContainer(ConfigurationLoader<N> configurationLoader, ClassLoader loader, String packageBase, ModuleConstructor constructor, LoggerProxy loggerProxy, Procedure onPreEnable, Procedure onEnable, Procedure onPostEnable) throws QuickStartModuleDiscoveryException {
-        super(configurationLoader, loggerProxy, onPreEnable, onEnable, onPostEnable);
+    private <N extends ConfigurationNode> DiscoveryModuleContainer(ConfigurationLoader<N> configurationLoader, ClassLoader loader, String packageBase, ModuleConstructor constructor, ModuleEnabler enabler, LoggerProxy loggerProxy, Procedure onPreEnable, Procedure onEnable, Procedure onPostEnable) throws QuickStartModuleDiscoveryException {
+        super(configurationLoader, loggerProxy, enabler, onPreEnable, onEnable, onPostEnable);
         this.classLoader = loader;
         this.constructor = constructor;
         this.packageLocation = packageBase;
@@ -119,7 +120,7 @@ public class DiscoveryModuleContainer extends ModuleContainer {
 
     public final static class Builder extends ModuleContainer.Builder<DiscoveryModuleContainer, Builder> {
         private String packageToScan;
-        private ModuleConstructor constructor;
+        private ModuleConstructor constructor = SimpleModuleConstructor.INSTANCE;
         private ClassLoader classLoader;
 
         /**
@@ -179,7 +180,7 @@ public class DiscoveryModuleContainer extends ModuleContainer {
             }
 
             checkBuild();
-            return new DiscoveryModuleContainer(configurationLoader, classLoader, packageToScan, constructor, loggerProxy,
+            return new DiscoveryModuleContainer(configurationLoader, classLoader, packageToScan, constructor, enabler, loggerProxy,
                     onPreEnable, onEnable, onPostEnable);
         }
     }

@@ -14,6 +14,7 @@ import uk.co.drnaylor.quickstart.enums.ConstructionPhase;
 import uk.co.drnaylor.quickstart.enums.LoadingStatus;
 import uk.co.drnaylor.quickstart.enums.ModulePhase;
 import uk.co.drnaylor.quickstart.exceptions.*;
+import uk.co.drnaylor.quickstart.loaders.ModuleEnabler;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -70,6 +71,11 @@ public abstract class ModuleContainer {
     private final Procedure onPostEnable;
 
     /**
+     * Provides
+     */
+    private final ModuleEnabler enabler;
+
+    /**
      * Constructs a {@link ModuleContainer} and starts discovery of the modules.
      *
      * @param configurationLoader The {@link ConfigurationLoader} that contains details of whether the modules should be enabled or not.
@@ -77,12 +83,16 @@ public abstract class ModuleContainer {
      * @throws QuickStartModuleDiscoveryException if there is an error starting the Module Container.
      */
     protected <N extends ConfigurationNode> ModuleContainer(ConfigurationLoader<N> configurationLoader,
-                                                          LoggerProxy loggerProxy,
-                                                          Procedure onPreEnable, Procedure onEnable, Procedure onPostEnable) throws QuickStartModuleDiscoveryException {
+                                                            LoggerProxy loggerProxy,
+                                                            ModuleEnabler moduleEnabler,
+                                                            Procedure onPreEnable,
+                                                            Procedure onEnable,
+                                                            Procedure onPostEnable) throws QuickStartModuleDiscoveryException {
 
         try {
             this.config = new SystemConfig<>(configurationLoader, loggerProxy);
             this.loggerProxy = loggerProxy;
+            this.enabler = moduleEnabler;
             this.onPreEnable = onPreEnable;
             this.onPostEnable = onPostEnable;
             this.onEnable = onEnable;
@@ -262,7 +272,7 @@ public abstract class ModuleContainer {
 
                 try {
                     Module m = modules.get(s);
-                    v.onModuleAction(m, ms);
+                    v.onModuleAction(enabler, m, ms);
                 } catch (Exception construction) {
                     construction.printStackTrace();
                     modules.remove(s);
@@ -329,6 +339,7 @@ public abstract class ModuleContainer {
         protected Procedure onPreEnable = () -> {};
         protected Procedure onEnable = () -> {};
         protected Procedure onPostEnable = () -> {};
+        protected ModuleEnabler enabler = ModuleEnabler.SIMPLE_INSTANCE;
 
         protected abstract T getThis();
 
@@ -390,11 +401,26 @@ public abstract class ModuleContainer {
             return getThis();
         }
 
+        /**
+         * Sets the {@link ModuleEnabler} to run when enabling modules.
+         *
+         * @param enabler The {@link ModuleEnabler}, or {@code null} when the default should be used.
+         * @return This {@link Builder}, for chaining.
+         */
+        public T setModuleEnabler(ModuleEnabler enabler) {
+            this.enabler = enabler;
+            return getThis();
+        }
+
         protected void checkBuild() {
             Preconditions.checkNotNull(configurationLoader);
 
             if (loggerProxy == null) {
                 loggerProxy = DefaultLogger.INSTANCE;
+            }
+
+            if (enabler == null) {
+                enabler = ModuleEnabler.SIMPLE_INSTANCE;
             }
 
             Metadata.getStartupMessage().ifPresent(x -> loggerProxy.info(x));
@@ -419,7 +445,7 @@ public abstract class ModuleContainer {
 
         void onStart(ModuleContainer container);
 
-        void onModuleAction(Module module, ModuleSpec ms) throws Exception;
+        void onModuleAction(ModuleEnabler enabler, Module module, ModuleSpec ms) throws Exception;
     }
 
     private enum EnablePhase implements ConstructPhase {
@@ -430,8 +456,8 @@ public abstract class ModuleContainer {
             }
 
             @Override
-            public void onModuleAction(Module module, ModuleSpec ms) throws Exception {
-                module.preEnable();
+            public void onModuleAction(ModuleEnabler enabler, Module module, ModuleSpec ms) throws Exception {
+                enabler.preEnableModule(module);
             }
         },
         ENABLE {
@@ -441,8 +467,8 @@ public abstract class ModuleContainer {
             }
 
             @Override
-            public void onModuleAction(Module module, ModuleSpec ms) throws Exception {
-                module.onEnable();
+            public void onModuleAction(ModuleEnabler enabler, Module module, ModuleSpec ms) throws Exception {
+                enabler.enableModule(module);
                 ms.setPhase(ModulePhase.ENABLED);
             }
         },
@@ -453,8 +479,8 @@ public abstract class ModuleContainer {
             }
 
             @Override
-            public void onModuleAction(Module module, ModuleSpec ms) throws Exception {
-                module.postEnable();
+            public void onModuleAction(ModuleEnabler enabler, Module module, ModuleSpec ms) throws Exception {
+                enabler.postEnableModule(module);
             }
         }
     }

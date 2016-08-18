@@ -11,18 +11,15 @@ import com.google.common.reflect.ClassPath;
 import ninja.leaping.configurate.ConfigurationNode;
 import ninja.leaping.configurate.loader.ConfigurationLoader;
 import uk.co.drnaylor.quickstart.*;
-import uk.co.drnaylor.quickstart.annotations.ModuleData;
-import uk.co.drnaylor.quickstart.loaders.ModuleConstructor;
-import uk.co.drnaylor.quickstart.loaders.SimpleModuleConstructor;
-import uk.co.drnaylor.quickstart.enums.LoadingStatus;
 import uk.co.drnaylor.quickstart.exceptions.QuickStartModuleDiscoveryException;
+import uk.co.drnaylor.quickstart.loaders.ModuleConstructor;
 import uk.co.drnaylor.quickstart.loaders.ModuleEnabler;
+import uk.co.drnaylor.quickstart.loaders.SimpleModuleConstructor;
 
-import java.text.MessageFormat;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-public class DiscoveryModuleContainer extends ModuleContainer {
+public final class DiscoveryModuleContainer extends ModuleContainer {
 
     /**
      * Gets a builder to create a {@link DiscoveryModuleContainer}

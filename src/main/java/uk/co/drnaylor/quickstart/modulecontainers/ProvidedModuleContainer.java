@@ -8,13 +8,10 @@ import com.google.common.base.Preconditions;
 import ninja.leaping.configurate.ConfigurationNode;
 import ninja.leaping.configurate.loader.ConfigurationLoader;
 import uk.co.drnaylor.quickstart.*;
-import uk.co.drnaylor.quickstart.annotations.ModuleData;
-import uk.co.drnaylor.quickstart.enums.LoadingStatus;
 import uk.co.drnaylor.quickstart.exceptions.NoModuleException;
 import uk.co.drnaylor.quickstart.exceptions.QuickStartModuleDiscoveryException;
 import uk.co.drnaylor.quickstart.loaders.ModuleEnabler;
 
-import java.text.MessageFormat;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;

@@ -20,11 +20,11 @@ public final class ModuleSpec {
     private final boolean isMandatory;
     private ModulePhase phase = ModulePhase.DISCOVERED;
 
-    public ModuleSpec(Class<? extends Module> moduleClass, ModuleData data) {
+    ModuleSpec(Class<? extends Module> moduleClass, ModuleData data) {
         this(moduleClass, data.name(), data.status(), data.isRequired());
     }
 
-    public  ModuleSpec(Class<? extends Module> moduleClass, String name, LoadingStatus status, boolean isMandatory) {
+    ModuleSpec(Class<? extends Module> moduleClass, String name, LoadingStatus status, boolean isMandatory) {
         Preconditions.checkNotNull(moduleClass);
         Preconditions.checkNotNull(name);
         Preconditions.checkNotNull(status);
@@ -67,7 +67,7 @@ public final class ModuleSpec {
      *
      * @param status The {@link LoadingStatus}
      */
-    public void setStatus(LoadingStatus status) {
+    void setStatus(LoadingStatus status) {
         Preconditions.checkState(phase == ModulePhase.DISCOVERED);
         Preconditions.checkState(!isMandatory);
         this.status = status;

@@ -6,14 +6,14 @@ package uk.co.drnaylor.quickstart;
 
 import java.util.Optional;
 
-public class Metadata {
+class Metadata {
 
-    public final static String NAME = "@name@";
-    public final static String VERSION = "@version@";
+    private final static String NAME = "@name@";
+    private final static String VERSION = "@version@";
 
     private static boolean hasStarted = false;
 
-    public static Optional<String> getStartupMessage() {
+    static Optional<String> getStartupMessage() {
         if (!hasStarted) {
             hasStarted = true;
             return Optional.of("Starting " + NAME + " version " + VERSION + " subsystem.");

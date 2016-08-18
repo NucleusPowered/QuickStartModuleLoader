@@ -2,14 +2,13 @@
  * This file is part of QuickStart Module Loader, licensed under the MIT License (MIT). See the LICENSE.txt file
  * at the root of this project for more details.
  */
-package uk.co.drnaylor.quickstart.constructors;
+package uk.co.drnaylor.quickstart.loaders;
 
 import uk.co.drnaylor.quickstart.Module;
 import uk.co.drnaylor.quickstart.exceptions.QuickStartModuleLoaderException;
 
 /**
- * A simple module constructor that tries to construct using a no-args constructor via reflection, and enable it
- * by simply calling the {@link Module#onEnable()} method.
+ * A simple module constructor that tries to construct using a no-args constructor via reflection.
  */
 public class SimpleModuleConstructor implements ModuleConstructor {
 
@@ -26,15 +25,6 @@ public class SimpleModuleConstructor implements ModuleConstructor {
             return moduleClass.newInstance();
         } catch (InstantiationException | IllegalAccessException e) {
             throw new QuickStartModuleLoaderException.Construction(moduleClass, "Unable to construct the module: " + moduleClass.getName(), e);
-        }
-    }
-
-    @Override
-    public void enableModule(Module module) throws QuickStartModuleLoaderException.Enabling {
-        try {
-            module.onEnable();
-        } catch (Exception e) {
-            throw new QuickStartModuleLoaderException.Enabling(module.getClass(), "Unable to enable the module: " + module.getClass().getName(), e);
         }
     }
 }

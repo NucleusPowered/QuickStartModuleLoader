@@ -12,7 +12,7 @@ import uk.co.drnaylor.quickstart.enums.ModulePhase;
 /**
  * Internal specification of a module.
  */
-final class ModuleSpec {
+public final class ModuleSpec {
 
     private final Class<? extends Module> moduleClass;
     private final String name;
@@ -67,7 +67,7 @@ final class ModuleSpec {
      *
      * @param status The {@link LoadingStatus}
      */
-    public void setStatus(LoadingStatus status) {
+    void setStatus(LoadingStatus status) {
         Preconditions.checkState(phase == ModulePhase.DISCOVERED);
         Preconditions.checkState(!isMandatory);
         this.status = status;

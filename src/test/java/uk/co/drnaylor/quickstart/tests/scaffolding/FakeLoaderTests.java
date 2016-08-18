@@ -11,6 +11,7 @@ import ninja.leaping.configurate.loader.ConfigurationLoader;
 import org.junit.Before;
 import uk.co.drnaylor.quickstart.ModuleContainer;
 import uk.co.drnaylor.quickstart.exceptions.QuickStartModuleDiscoveryException;
+import uk.co.drnaylor.quickstart.modulecontainers.DiscoveryModuleContainer;
 
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -30,6 +31,8 @@ public class FakeLoaderTests {
     }
 
     protected ModuleContainer getContainer(String p) throws QuickStartModuleDiscoveryException {
-        return ModuleContainer.builder().setConfigurationLoader(loader).setPackageToScan(p).build();
+        ModuleContainer container = DiscoveryModuleContainer.builder().setConfigurationLoader(loader).setPackageToScan(p).build();
+        container.startDiscover();
+        return container;
     }
 }

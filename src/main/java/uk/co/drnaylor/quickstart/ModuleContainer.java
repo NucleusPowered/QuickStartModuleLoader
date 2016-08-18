@@ -5,21 +5,17 @@
 package uk.co.drnaylor.quickstart;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
-import com.google.common.reflect.ClassPath;
 import ninja.leaping.configurate.ConfigurationNode;
 import ninja.leaping.configurate.loader.ConfigurationLoader;
 import ninja.leaping.configurate.objectmapping.ObjectMappingException;
 import uk.co.drnaylor.quickstart.annotations.ModuleData;
 import uk.co.drnaylor.quickstart.config.AbstractConfigAdapter;
-import uk.co.drnaylor.quickstart.constructors.ModuleConstructor;
-import uk.co.drnaylor.quickstart.constructors.SimpleModuleConstructor;
 import uk.co.drnaylor.quickstart.enums.ConstructionPhase;
 import uk.co.drnaylor.quickstart.enums.LoadingStatus;
 import uk.co.drnaylor.quickstart.enums.ModulePhase;
 import uk.co.drnaylor.quickstart.exceptions.*;
+import uk.co.drnaylor.quickstart.loaders.ModuleEnabler;
 
 import java.io.IOException;
 import java.text.MessageFormat;
@@ -39,26 +35,7 @@ import java.util.stream.Collectors;
  *     A system may have multiple module containers. Each module container is completely separate from one another.
  * </p>
  */
-public final class ModuleContainer {
-
-    /**
-     * Gets a builder to create a {@link ModuleContainer}
-     *
-     * @return A {@link ModuleContainer.Builder} for building a {@link ModuleContainer}
-     */
-    public static ModuleContainer.Builder builder() {
-        return new Builder();
-    }
-
-    /**
-     * The root of the package to scan.
-     */
-    private final String packageLocation;
-
-    /**
-     * The {@link ClassLoader} to scan for new modules.
-     */
-    private final ClassLoader classLoader;
+public abstract class ModuleContainer {
 
     /**
      * The current phase of the container.
@@ -68,27 +45,17 @@ public final class ModuleContainer {
     /**
      * The modules that have been discovered by the container.
      */
-    private final Map<String, ModuleSpec> discoveredModules = Maps.newHashMap();
+    protected final Map<String, ModuleSpec> discoveredModules = Maps.newHashMap();
 
     /**
      * Contains the main configuration file.
      */
-    private final SystemConfig<?, ? extends ConfigurationLoader<?>> config;
-
-    /**
-     * Provides the methods to use to construct the module.
-     */
-    private final ModuleConstructor constructor;
+    protected final SystemConfig<?, ? extends ConfigurationLoader<?>> config;
 
     /**
      * The logger to use.
      */
-    private final LoggerProxy loggerProxy;
-
-    /**
-     * The classes that were loaded by the module loader.
-     */
-    private final Set<Class<?>> loadedClasses = Sets.newHashSet();
+    protected final LoggerProxy loggerProxy;
 
     /**
      * Fires when the PREENABLE phase starts.
@@ -106,94 +73,95 @@ public final class ModuleContainer {
     private final Procedure onPostEnable;
 
     /**
+     * Provides
+     */
+    private final ModuleEnabler enabler;
+
+    /**
      * Constructs a {@link ModuleContainer} and starts discovery of the modules.
      *
+     * @param <N>                 The type of {@link ConfigurationNode} to use.
      * @param configurationLoader The {@link ConfigurationLoader} that contains details of whether the modules should be enabled or not.
-     * @param loader The {@link ClassLoader} that contains the classpath in which the modules are located.
-     * @param packageBase The root name of the package to scan for modules.
+     * @param moduleEnabler       The {@link ModuleEnabler} that contains the logic to enable modules.
+     * @param loggerProxy         The {@link LoggerProxy} that contains methods to send messages to the logger, or any other source.
+     * @param onPreEnable         The {@link Procedure} to run on pre enable, before modules are pre-enabled.
+     * @param onEnable            The {@link Procedure} to run on enable, before modules are pre-enabled.
+     * @param onPostEnable        The {@link Procedure} to run on post enable, before modules are pre-enabled.
      *
      * @throws QuickStartModuleDiscoveryException if there is an error starting the Module Container.
      */
-    private <N extends ConfigurationNode> ModuleContainer(ConfigurationLoader<N> configurationLoader, ClassLoader loader,
-                                                          String packageBase, ModuleConstructor constructor, LoggerProxy loggerProxy,
-                                                          Procedure onPreEnable, Procedure onEnable, Procedure onPostEnable) throws QuickStartModuleDiscoveryException {
+    protected <N extends ConfigurationNode> ModuleContainer(ConfigurationLoader<N> configurationLoader,
+                                                            LoggerProxy loggerProxy,
+                                                            ModuleEnabler moduleEnabler,
+                                                            Procedure onPreEnable,
+                                                            Procedure onEnable,
+                                                            Procedure onPostEnable) throws QuickStartModuleDiscoveryException {
 
         try {
             this.config = new SystemConfig<>(configurationLoader, loggerProxy);
-            this.constructor = constructor;
-            this.classLoader = loader;
-            this.packageLocation = packageBase;
             this.loggerProxy = loggerProxy;
+            this.enabler = moduleEnabler;
             this.onPreEnable = onPreEnable;
             this.onPostEnable = onPostEnable;
             this.onEnable = onEnable;
-
-            discoverModules();
         } catch (Exception e) {
             throw new QuickStartModuleDiscoveryException("Unable to start QuickStart", e);
         }
     }
 
-    /**
-     * Starts discovery of modules.
-     */
-    private void discoverModules() throws IOException, QuickStartModuleDiscoveryException {
-        Preconditions.checkState(currentPhase == ConstructionPhase.INITALISED);
-        currentPhase = ConstructionPhase.DISCOVERING;
-
-        // Get the modules out.
-        Set<ClassPath.ClassInfo> ci = ClassPath.from(classLoader).getTopLevelClassesRecursive(packageLocation);
-        loadedClasses.addAll(ci.stream().map(ClassPath.ClassInfo::load).collect(Collectors.toSet()));
-        Set<Class<? extends Module>> modules = loadedClasses.stream().filter(Module.class::isAssignableFrom)
-                .map(x -> (Class<? extends Module>)x.asSubclass(Module.class)).collect(Collectors.toSet());
-
-        if (modules.isEmpty()) {
-            throw new QuickStartModuleDiscoveryException("No modules were found", null);
-        }
-
-        // Put the modules into the discoverer.
-        modules.forEach(s -> {
-            // If we have a module annotation, we are golden.
-            if (s.isAnnotationPresent(ModuleData.class)) {
-                ModuleData md = s.getAnnotation(ModuleData.class);
-                discoveredModules.put(md.id().toLowerCase(), new ModuleSpec(s, md));
-            } else {
-                String id = s.getName().toLowerCase();
-                loggerProxy.warn(MessageFormat.format("The module {0} does not have a ModuleData annotation associated with it. We're just assuming an ID of {0}.", id));
-                discoveredModules.put(id, new ModuleSpec(s, id, LoadingStatus.ENABLED, false));
-            }
-        });
-
-        // Modules discovered. Create the Module Config adapter.
-        Map<String, LoadingStatus> m = discoveredModules.entrySet().stream().filter(x -> !x.getValue().isMandatory())
-                .collect(Collectors.toMap(Map.Entry::getKey, v -> v.getValue().getStatus()));
-
-        // Attaches config adapter and loads in the defaults.
-        config.attachModulesConfig(m);
-        config.saveAdapterDefaults();
-
-        // Load what we have in config into our discovered modules.
+    public final void startDiscover() throws QuickStartModuleDiscoveryException {
         try {
-            config.getConfigAdapter().getNode().forEach((k, v) -> {
-                try {
-                    ModuleSpec ms = discoveredModules.get(k);
-                    if (ms != null) {
-                        ms.setStatus(v);
-                    } else {
-                        loggerProxy.warn(String.format("Ignoring module entry %s in the configuration file: module does not exist.", k));
-                    }
-                } catch (IllegalStateException ex) {
-                    loggerProxy.warn("A mandatory module can't have its status changed by config. Falling back to FORCELOAD for " + k);
+            Preconditions.checkState(currentPhase == ConstructionPhase.INITALISED);
+            currentPhase = ConstructionPhase.DISCOVERING;
+
+            Set<Class<? extends Module>> modules = discoverModules();
+            modules.forEach(s -> {
+                // If we have a module annotation, we are golden.
+                if (s.isAnnotationPresent(ModuleData.class)) {
+                    ModuleData md = s.getAnnotation(ModuleData.class);
+                    discoveredModules.put(md.id().toLowerCase(), new ModuleSpec(s, md));
+                } else {
+                    String id = s.getClass().getName().toLowerCase();
+                    loggerProxy.warn(MessageFormat.format("The module {0} does not have a ModuleData annotation associated with it. We're just assuming an ID of {0}.", id));
+                    discoveredModules.put(id, new ModuleSpec(s, id, LoadingStatus.ENABLED, false));
                 }
             });
-        } catch (ObjectMappingException e) {
-            loggerProxy.warn("Could not load modules config, falling back to defaults.");
-            e.printStackTrace();
-        }
 
-        // Modules have been discovered.
-        currentPhase = ConstructionPhase.DISCOVERED;
+            // Modules discovered. Create the Module Config adapter.
+            Map<String, LoadingStatus> m = discoveredModules.entrySet().stream().filter(x -> !x.getValue().isMandatory())
+                    .collect(Collectors.toMap(Map.Entry::getKey, v -> v.getValue().getStatus()));
+
+            // Attaches config adapter and loads in the defaults.
+            config.attachModulesConfig(m);
+            config.saveAdapterDefaults();
+
+            // Load what we have in config into our discovered modules.
+            try {
+                config.getConfigAdapter().getNode().forEach((k, v) -> {
+                    try {
+                        ModuleSpec ms = discoveredModules.get(k);
+                        if (ms != null) {
+                            ms.setStatus(v);
+                        } else {
+                            loggerProxy.warn(String.format("Ignoring module entry %s in the configuration file: module does not exist.", k));
+                        }
+                    } catch (IllegalStateException ex) {
+                        loggerProxy.warn("A mandatory module can't have its status changed by config. Falling back to FORCELOAD for " + k);
+                    }
+                });
+            } catch (ObjectMappingException e) {
+                loggerProxy.warn("Could not load modules config, falling back to defaults.");
+                e.printStackTrace();
+            }
+
+            // Modules have been discovered.
+            currentPhase = ConstructionPhase.DISCOVERED;
+        } catch (Exception e) {
+            throw new QuickStartModuleDiscoveryException("Unable to discover QuickStart modules", e);
+        }
     }
+
+    protected abstract Set<Class<? extends Module>> discoverModules() throws Exception;
 
     /**
      * Gets the current phase of the module loader.
@@ -248,6 +216,8 @@ public final class ModuleContainer {
         ms.setStatus(LoadingStatus.DISABLED);
     }
 
+    protected abstract Module getModule(ModuleSpec spec) throws Exception;
+
     /**
      * Starts the module construction and enabling phase. This is the final phase for loading the modules.
      *
@@ -275,7 +245,7 @@ public final class ModuleContainer {
         for (String s : getModules(ModuleStatusTristate.ENABLE)) {
             ModuleSpec ms = discoveredModules.get(s);
             try {
-                modules.put(s, constructor.constructModule(ms.getModuleClass()));
+                modules.put(s, getModule(ms));
                 ms.setPhase(ModulePhase.CONSTRUCTED);
             } catch (Exception construction) {
                 construction.printStackTrace();
@@ -321,7 +291,7 @@ public final class ModuleContainer {
 
                 try {
                     Module m = modules.get(s);
-                    v.construct(constructor, m, ms);
+                    v.onModuleAction(enabler, m, ms);
                 } catch (Exception construction) {
                     construction.printStackTrace();
                     modules.remove(s);
@@ -379,27 +349,18 @@ public final class ModuleContainer {
     }
 
     /**
-     * Gets the {@link Class}es that were scanned during the module discovery phase.
-     *
-     * @return Gets a {@link Set} of the loaded classes.
-     */
-    public final Set<Class<?>> getLoadedClasses() {
-        return ImmutableSet.copyOf(this.loadedClasses);
-    }
-
-    /**
      * Builder class to create a {@link ModuleContainer}
      */
-    public static class Builder {
+    protected static abstract class Builder<R extends ModuleContainer, T extends Builder<R, T>> {
 
-        private ConfigurationLoader<? extends ConfigurationNode> configurationLoader;
-        private String packageToScan;
-        private ModuleConstructor constructor;
-        private ClassLoader classLoader;
-        private LoggerProxy loggerProxy;
-        private Procedure onPreEnable = () -> {};
-        private Procedure onEnable = () -> {};
-        private Procedure onPostEnable = () -> {};
+        protected ConfigurationLoader<? extends ConfigurationNode> configurationLoader;
+        protected LoggerProxy loggerProxy;
+        protected Procedure onPreEnable = () -> {};
+        protected Procedure onEnable = () -> {};
+        protected Procedure onPostEnable = () -> {};
+        protected ModuleEnabler enabler = ModuleEnabler.SIMPLE_INSTANCE;
+
+        protected abstract T getThis();
 
         /**
          * Sets the {@link ConfigurationLoader} that will handle the module loading.
@@ -407,43 +368,9 @@ public final class ModuleContainer {
          * @param configurationLoader The loader to use.
          * @return This {@link Builder}, for chaining.
          */
-        public Builder setConfigurationLoader(ConfigurationLoader<? extends ConfigurationNode> configurationLoader) {
+        public T setConfigurationLoader(ConfigurationLoader<? extends ConfigurationNode> configurationLoader) {
             this.configurationLoader = configurationLoader;
-            return this;
-        }
-
-        /**
-         * Sets the root package name to scan.
-         *
-         * @param packageToScan The root of the package (for example, <code>uk.co.drnaylor.quickstart</code> will scan
-         *                      that package and all subpackages, such as <code>uk.co.drnaylor.quickstart.config</code>)
-         * @return This {@link Builder}, for chaining.
-         */
-        public Builder setPackageToScan(String packageToScan) {
-            this.packageToScan = packageToScan;
-            return this;
-        }
-
-        /**
-         * Sets the {@link ModuleConstructor} to use when building the module objects.
-         *
-         * @param constructor The constructor to use
-         * @return This {@link Builder}, for chaining.
-         */
-        public Builder setConstructor(ModuleConstructor constructor) {
-            this.constructor = constructor;
-            return this;
-        }
-
-        /**
-         * Sets the {@link ClassLoader} to use when scanning the classpath.
-         *
-         * @param classLoader The class loader to use.
-         * @return This {@link Builder}, for chaining.
-         */
-        public Builder setClassLoader(ClassLoader classLoader) {
-            this.classLoader = classLoader;
-            return this;
+            return getThis();
         }
 
         /**
@@ -452,9 +379,9 @@ public final class ModuleContainer {
          * @param loggerProxy The logger proxy to use.
          * @return This {@link Builder}, for chaining.
          */
-        public Builder setLoggerProxy(LoggerProxy loggerProxy) {
+        public T setLoggerProxy(LoggerProxy loggerProxy) {
             this.loggerProxy = loggerProxy;
-            return this;
+            return getThis();
         }
 
         /**
@@ -463,10 +390,10 @@ public final class ModuleContainer {
          * @param onPreEnable The {@link Procedure}
          * @return This {@link Builder}, for chaining.
          */
-        public Builder setOnPreEnable(Procedure onPreEnable) {
+        public T setOnPreEnable(Procedure onPreEnable) {
             Preconditions.checkNotNull(onPreEnable);
             this.onPreEnable = onPreEnable;
-            return this;
+            return getThis();
         }
 
         /**
@@ -475,10 +402,10 @@ public final class ModuleContainer {
          * @param onEnable The {@link Procedure}
          * @return This {@link Builder}, for chaining.
          */
-        public Builder setOnEnable(Procedure onEnable) {
+        public T setOnEnable(Procedure onEnable) {
             Preconditions.checkNotNull(onEnable);
             this.onEnable = onEnable;
-            return this;
+            return getThis();
         }
 
         /**
@@ -487,38 +414,38 @@ public final class ModuleContainer {
          * @param onPostEnable The {@link Procedure}
          * @return This {@link Builder}, for chaining.
          */
-        public Builder setOnPostEnable(Procedure onPostEnable) {
+        public T setOnPostEnable(Procedure onPostEnable) {
             Preconditions.checkNotNull(onPostEnable);
             this.onPostEnable = onPostEnable;
-            return this;
+            return getThis();
         }
 
         /**
-         * Builds a {@link ModuleContainer}.
+         * Sets the {@link ModuleEnabler} to run when enabling modules.
          *
-         * @return The {@link ModuleContainer}.
-         * @throws QuickStartModuleDiscoveryException if the configuration loader cannot load data from the file.
+         * @param enabler The {@link ModuleEnabler}, or {@code null} when the default should be used.
+         * @return This {@link Builder}, for chaining.
          */
-        public ModuleContainer build() throws QuickStartModuleDiscoveryException {
-            Preconditions.checkNotNull(packageToScan);
+        public T setModuleEnabler(ModuleEnabler enabler) {
+            this.enabler = enabler;
+            return getThis();
+        }
+
+        protected void checkBuild() {
             Preconditions.checkNotNull(configurationLoader);
-
-            if (constructor == null) {
-                constructor = SimpleModuleConstructor.INSTANCE;
-            }
-
-            if (classLoader == null) {
-                classLoader = getClass().getClassLoader();
-            }
 
             if (loggerProxy == null) {
                 loggerProxy = DefaultLogger.INSTANCE;
             }
 
+            if (enabler == null) {
+                enabler = ModuleEnabler.SIMPLE_INSTANCE;
+            }
+
             Metadata.getStartupMessage().ifPresent(x -> loggerProxy.info(x));
-            return new ModuleContainer(configurationLoader, classLoader, packageToScan, constructor, loggerProxy,
-                    onPreEnable, onEnable, onPostEnable);
         }
+
+        public abstract R build() throws Exception;
     }
 
     public enum ModuleStatusTristate {
@@ -537,7 +464,7 @@ public final class ModuleContainer {
 
         void onStart(ModuleContainer container);
 
-        void construct(ModuleConstructor constructor, Module module, ModuleSpec ms) throws Exception;
+        void onModuleAction(ModuleEnabler enabler, Module module, ModuleSpec ms) throws Exception;
     }
 
     private enum EnablePhase implements ConstructPhase {
@@ -548,8 +475,8 @@ public final class ModuleContainer {
             }
 
             @Override
-            public void construct(ModuleConstructor constructor, Module module, ModuleSpec ms) throws Exception {
-                constructor.preEnableModule(module);
+            public void onModuleAction(ModuleEnabler enabler, Module module, ModuleSpec ms) throws Exception {
+                enabler.preEnableModule(module);
             }
         },
         ENABLE {
@@ -559,8 +486,8 @@ public final class ModuleContainer {
             }
 
             @Override
-            public void construct(ModuleConstructor constructor, Module module, ModuleSpec ms) throws Exception {
-                constructor.enableModule(module);
+            public void onModuleAction(ModuleEnabler enabler, Module module, ModuleSpec ms) throws Exception {
+                enabler.enableModule(module);
                 ms.setPhase(ModulePhase.ENABLED);
             }
         },
@@ -571,8 +498,8 @@ public final class ModuleContainer {
             }
 
             @Override
-            public void construct(ModuleConstructor constructor, Module module, ModuleSpec ms) throws Exception {
-                constructor.postEnableModule(module);
+            public void onModuleAction(ModuleEnabler enabler, Module module, ModuleSpec ms) throws Exception {
+                enabler.postEnableModule(module);
             }
         }
     }

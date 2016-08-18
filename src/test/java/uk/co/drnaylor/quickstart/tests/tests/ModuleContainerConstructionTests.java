@@ -28,7 +28,7 @@ public class ModuleContainerConstructionTests extends FakeLoaderTests {
     @Test
     public void testThatNoModulesThrow() throws Exception {
         expectedException.expect(QuickStartModuleDiscoveryException.class);
-        expectedException.expectMessage("Unable to start QuickStart");
+        expectedException.expectMessage("Unable to discover QuickStart modules");
 
         getContainer("uk.co.drnaylor.quickstart.tests.modules.exceptions.notamodule");
     }

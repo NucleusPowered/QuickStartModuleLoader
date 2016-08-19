@@ -36,6 +36,22 @@ public @interface ModuleData {
     String name();
 
     /**
+     * Specifies the {@link uk.co.drnaylor.quickstart.Module}s that should be loaded before this one. Modules that are
+     * disabled will not prevent this module from loading.
+     *
+     * @return An array of module IDs to load before.
+     */
+    String[] softDependencies() default {};
+
+    /**
+     * Specified s the {@link uk.co.drnaylor.quickstart.Module}s that <strong>must</strong> be loaded before this one.
+     * Modules that are dependencies and are disabled <strong>will</strong> prevent this module from loading.
+     *
+     * @return An array of module IDs to load before.
+     */
+    String[] dependencies() default {};
+
+    /**
      * The default {@link LoadingStatus} for this module, if nothing is defined.
      *
      * @return The {@link LoadingStatus}

@@ -5,9 +5,13 @@
 package uk.co.drnaylor.quickstart;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Lists;
 import uk.co.drnaylor.quickstart.annotations.ModuleData;
 import uk.co.drnaylor.quickstart.enums.LoadingStatus;
 import uk.co.drnaylor.quickstart.enums.ModulePhase;
+
+import java.util.Arrays;
+import java.util.List;
 
 /**
  * Internal specification of a module.
@@ -15,24 +19,37 @@ import uk.co.drnaylor.quickstart.enums.ModulePhase;
 public final class ModuleSpec {
 
     private final Class<? extends Module> moduleClass;
+    private final List<String> softDeps;
+    private final List<String> deps;
     private final String name;
+    private final String id;
     private LoadingStatus status;
     private final boolean isMandatory;
     private ModulePhase phase = ModulePhase.DISCOVERED;
 
     ModuleSpec(Class<? extends Module> moduleClass, ModuleData data) {
-        this(moduleClass, data.name(), data.status(), data.isRequired());
+        this(moduleClass, data.id(), data.name(), data.status(), data.isRequired(), Arrays.asList(data.softDependencies()), Arrays.asList(data.dependencies()));
     }
 
-    ModuleSpec(Class<? extends Module> moduleClass, String name, LoadingStatus status, boolean isMandatory) {
+    ModuleSpec(Class<? extends Module> moduleClass, String id, String name, LoadingStatus status, boolean isMandatory) {
+        this(moduleClass, id, name, status, isMandatory, Lists.newArrayList(), Lists.newArrayList());
+    }
+
+    ModuleSpec(Class<? extends Module> moduleClass, String id, String name, LoadingStatus status, boolean isMandatory, List<String> softDeps, List<String> deps) {
         Preconditions.checkNotNull(moduleClass);
+        Preconditions.checkNotNull(id);
         Preconditions.checkNotNull(name);
         Preconditions.checkNotNull(status);
+        Preconditions.checkNotNull(deps);
+        Preconditions.checkNotNull(softDeps);
 
+        this.id = id;
         this.moduleClass = moduleClass;
         this.name = name;
         this.status = isMandatory ? LoadingStatus.FORCELOAD : status;
         this.isMandatory = isMandatory;
+        this.softDeps = softDeps;
+        this.deps = deps;
     }
 
     /**
@@ -42,6 +59,15 @@ public final class ModuleSpec {
      */
     public Class<? extends Module> getModuleClass() {
         return moduleClass;
+    }
+
+    /**
+     * Gets the internal ID of the module.
+     *
+     * @return The ID of the module.
+     */
+    public String getId() {
+        return id;
     }
 
     /**
@@ -100,5 +126,13 @@ public final class ModuleSpec {
     void setPhase(ModulePhase phase) {
         Preconditions.checkState(this.phase != ModulePhase.ENABLED && this.phase != ModulePhase.DISABLED && this.phase != ModulePhase.ERRORED);
         this.phase = phase;
+    }
+
+    public List<String> getSoftDeps() {
+        return softDeps;
+    }
+
+    public List<String> getDeps() {
+        return deps;
     }
 }

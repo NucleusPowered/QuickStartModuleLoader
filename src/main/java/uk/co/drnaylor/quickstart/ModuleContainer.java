@@ -19,10 +19,7 @@ import uk.co.drnaylor.quickstart.loaders.ModuleEnabler;
 
 import java.io.IOException;
 import java.text.MessageFormat;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
@@ -45,7 +42,7 @@ public abstract class ModuleContainer {
     /**
      * The modules that have been discovered by the container.
      */
-    protected final Map<String, ModuleSpec> discoveredModules = Maps.newHashMap();
+    protected final Map<String, ModuleSpec> discoveredModules = Maps.newLinkedHashMap();
 
     /**
      * Contains the main configuration file.
@@ -115,17 +112,21 @@ public abstract class ModuleContainer {
             currentPhase = ConstructionPhase.DISCOVERING;
 
             Set<Class<? extends Module>> modules = discoverModules();
+            HashMap<String, ModuleSpec> discovered = Maps.newHashMap();
             modules.forEach(s -> {
                 // If we have a module annotation, we are golden.
                 if (s.isAnnotationPresent(ModuleData.class)) {
                     ModuleData md = s.getAnnotation(ModuleData.class);
-                    discoveredModules.put(md.id().toLowerCase(), new ModuleSpec(s, md));
+                    discovered.put(md.id().toLowerCase(), new ModuleSpec(s, md));
                 } else {
                     String id = s.getClass().getName().toLowerCase();
                     loggerProxy.warn(MessageFormat.format("The module {0} does not have a ModuleData annotation associated with it. We're just assuming an ID of {0}.", id));
-                    discoveredModules.put(id, new ModuleSpec(s, id, LoadingStatus.ENABLED, false));
+                    discovered.put(id, new ModuleSpec(s, id, id, LoadingStatus.ENABLED, false));
                 }
             });
+
+            // Create the dependency map.
+            resolveDependencyOrder(discovered);
 
             // Modules discovered. Create the Module Config adapter.
             Map<String, LoadingStatus> m = discoveredModules.entrySet().stream().filter(x -> !x.getValue().isMandatory())
@@ -159,6 +160,33 @@ public abstract class ModuleContainer {
         } catch (Exception e) {
             throw new QuickStartModuleDiscoveryException("Unable to discover QuickStart modules", e);
         }
+    }
+
+    private void resolveDependencyOrder(Map<String, ModuleSpec> modules) throws Exception {
+        // First, get the modules that have no deps.
+        processDependencyStep(modules, x -> x.getValue().getDeps().isEmpty() && x.getValue().getSoftDeps().isEmpty());
+
+        while (!modules.isEmpty()) {
+            Set<String> addedModules = discoveredModules.keySet();
+            processDependencyStep(modules, x -> addedModules.containsAll(x.getValue().getDeps()) && addedModules.containsAll(x.getValue().getSoftDeps()));
+        }
+    }
+
+    private void processDependencyStep(Map<String, ModuleSpec> modules, Predicate<Map.Entry<String, ModuleSpec>> predicate) throws Exception {
+        // Filter on the predicate
+        List<Map.Entry<String, ModuleSpec>> modulesToAdd = modules.entrySet().stream().filter(predicate)
+                .sorted((x, y) -> x.getValue().isMandatory() == y.getValue().isMandatory() ? x.getKey().compareTo(y.getKey()) : Boolean.compare(x.getValue().isMandatory(), y.getValue().isMandatory()))
+                .collect(Collectors.toList());
+
+        if (modulesToAdd.isEmpty()) {
+            throw new IllegalStateException("Some modules have circular dependencies: " + modules.keySet().stream().collect(Collectors.joining(", ")));
+        }
+
+        modulesToAdd.forEach(x -> {
+            discoveredModules.put(x.getKey(), x.getValue());
+            modules.remove(x.getKey());
+        });
+
     }
 
     protected abstract Set<Class<? extends Module>> discoverModules() throws Exception;
@@ -236,6 +264,27 @@ public abstract class ModuleContainer {
         currentPhase = ConstructionPhase.ENABLING;
 
         // Get the modules that are being disabled and mark them as such.
+        Set<String> disabledModules = getModules(ModuleStatusTristate.DISABLE);
+        while (!disabledModules.isEmpty()) {
+            // Find any modules that have dependencies on disabled modules, and disable them.
+            List<ModuleSpec> toDisable = getModules(ModuleStatusTristate.ENABLE).stream().map(discoveredModules::get).filter(x -> !Collections.disjoint(disabledModules, x.getDeps())).collect(Collectors.toList());
+            if (toDisable.isEmpty()) {
+                break;
+            }
+
+            if (toDisable.stream().anyMatch(ModuleSpec::isMandatory)) {
+                String s = toDisable.stream().filter(ModuleSpec::isMandatory).map(ModuleSpec::getId).collect(Collectors.joining(", "));
+                Class<? extends Module> m = toDisable.stream().filter(ModuleSpec::isMandatory).findFirst().get().getModuleClass();
+                throw new QuickStartModuleLoaderException.Construction(m, "Tried to disable mandatory module", new IllegalStateException("Dependency failure, tried to disable a mandatory module (" + s + ")"));
+            }
+
+            toDisable.forEach(k -> {
+                k.setStatus(LoadingStatus.DISABLED);
+                disabledModules.add(k.getId());
+            });
+        }
+
+        // Make sure we get a clean slate here.
         getModules(ModuleStatusTristate.DISABLE).forEach(k -> discoveredModules.get(k).setPhase(ModulePhase.DISABLED));
 
         // Modules to enable.

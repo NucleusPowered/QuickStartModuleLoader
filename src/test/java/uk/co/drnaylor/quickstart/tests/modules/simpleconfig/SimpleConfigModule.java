@@ -11,7 +11,7 @@ import uk.co.drnaylor.quickstart.config.SimpleNodeConfigAdapter;
 
 import java.util.Optional;
 
-@ModuleData(id = "simple", name = "simple")
+@ModuleData(id = "simpleconfig", name = "simpleconfig")
 public class SimpleConfigModule implements Module {
 
     @Override

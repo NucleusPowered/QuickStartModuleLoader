@@ -70,4 +70,9 @@ public class ModuleDependenciesTests extends FakeLoaderTests {
         Assert.assertTrue(mc.getModules(ModuleContainer.ModuleStatusTristate.ENABLE).size() == 1);
         Assert.assertTrue(mc.getModules(ModuleContainer.ModuleStatusTristate.ENABLE).contains("moduletwo"));
     }
+
+    @Test(expected = QuickStartModuleDiscoveryException.class)
+    public void testIncorrectModuleDependencyCausesFailureToLoad() throws QuickStartModuleDiscoveryException {
+        getContainer("uk.co.drnaylor.quickstart.tests.modules.missingdeptest");
+    }
 }

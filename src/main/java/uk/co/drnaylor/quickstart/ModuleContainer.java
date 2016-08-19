@@ -5,6 +5,7 @@
 package uk.co.drnaylor.quickstart;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import ninja.leaping.configurate.ConfigurationNode;
 import ninja.leaping.configurate.loader.ConfigurationLoader;
@@ -217,8 +218,18 @@ public abstract class ModuleContainer {
      */
     public Set<String> getModules(final ModuleStatusTristate enabledOnly) {
         Preconditions.checkNotNull(enabledOnly);
-        Preconditions.checkArgument(currentPhase != ConstructionPhase.INITALISED && currentPhase != ConstructionPhase.DISCOVERING);
+        Preconditions.checkState(currentPhase != ConstructionPhase.INITALISED && currentPhase != ConstructionPhase.DISCOVERING);
         return discoveredModules.entrySet().stream().filter(enabledOnly.statusPredicate).map(Map.Entry::getKey).collect(Collectors.toSet());
+    }
+
+    /**
+     * Gets an immutable {@link Map} of module IDs to their {@link LoadingStatus} (disabled, enabled, forceload).
+     *
+     * @return The modules with their loading states.
+     */
+    public Map<String, LoadingStatus> getModulesWithLoadingState() {
+        Preconditions.checkState(currentPhase != ConstructionPhase.INITALISED && currentPhase != ConstructionPhase.DISCOVERING);
+        return ImmutableMap.copyOf(discoveredModules.entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey, v -> v.getValue().getStatus())));
     }
 
     /**

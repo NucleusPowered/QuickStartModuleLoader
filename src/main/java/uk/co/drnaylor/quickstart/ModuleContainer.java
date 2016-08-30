@@ -233,6 +233,27 @@ public abstract class ModuleContainer {
     }
 
     /**
+     * Gets whether a module is enabled and loaded.
+     *
+     * @param moduleId The module ID to check for.
+     * @return <code>true</code> if it is enabled.
+     * @throws NoModuleException Thrown if the module does not exist and modules have been loaded.
+     */
+    public boolean isModuleLoaded(String moduleId) throws NoModuleException {
+        if (currentPhase != ConstructionPhase.ENABLING && currentPhase != ConstructionPhase.ENABLED) {
+            return false;
+        }
+
+        ModuleSpec ms = discoveredModules.get(moduleId.toLowerCase());
+        if (ms == null) {
+            // No module
+            throw new NoModuleException(moduleId);
+        }
+
+        return ms.getPhase() == ModulePhase.ENABLED;
+    }
+
+    /**
      * Requests that a module be disabled. This can only be run during the {@link ConstructionPhase#DISCOVERED} phase.
      *
      * @param moduleName The ID of the module.

@@ -124,7 +124,8 @@ public final class ModuleSpec {
      * @param phase The {@link ModulePhase}
      */
     void setPhase(ModulePhase phase) {
-        Preconditions.checkState(this.phase != ModulePhase.ENABLED && this.phase != ModulePhase.DISABLED && this.phase != ModulePhase.ERRORED);
+        Preconditions.checkState(this.phase != ModulePhase.ENABLED && this.phase != ModulePhase.DISABLED && this.phase != ModulePhase.ERRORED,
+                "The module with ID " + id + " is already in the state " + this.phase.name() + " and cannot be set to the phase " + phase.name());
         this.phase = phase;
     }
 

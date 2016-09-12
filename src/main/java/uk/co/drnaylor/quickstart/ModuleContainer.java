@@ -370,6 +370,11 @@ public abstract class ModuleContainer {
             for (String s : c.keySet()) {
                 ModuleSpec ms = discoveredModules.get(s);
 
+                // If the module is errored, then we do not continue.
+                if (ms.getPhase() == ModulePhase.ERRORED) {
+                    continue;
+                }
+
                 try {
                     Module m = modules.get(s);
                     v.onModuleAction(enabler, m, ms);
@@ -530,8 +535,8 @@ public abstract class ModuleContainer {
     }
 
     public enum ModuleStatusTristate {
-        ENABLE(k -> k.getValue().getStatus() != LoadingStatus.DISABLED),
-        DISABLE(k -> k.getValue().getStatus() == LoadingStatus.DISABLED),
+        ENABLE(k -> k.getValue().getStatus() != LoadingStatus.DISABLED && k.getValue().getPhase() != ModulePhase.ERRORED && k.getValue().getPhase() != ModulePhase.DISABLED),
+        DISABLE(k -> !ENABLE.statusPredicate.test(k)),
         ALL(k -> true);
 
         private final Predicate<Map.Entry<String, ModuleSpec>> statusPredicate;

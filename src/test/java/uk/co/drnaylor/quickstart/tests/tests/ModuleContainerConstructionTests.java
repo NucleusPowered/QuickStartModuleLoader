@@ -80,4 +80,15 @@ public class ModuleContainerConstructionTests extends FakeLoaderTests {
         Assert.assertTrue(ss.contains("fl"));
         Assert.assertFalse(ss.contains("dis"));
     }
+
+    @Test
+    public void testThatOneModuleFailingDoesntKillWholeLoader() throws Exception {
+        // When we load these modules...
+        ModuleContainer mc = getContainer("uk.co.drnaylor.quickstart.tests.modules.exceptions.onefail");
+        mc.loadModules(false);
+
+        Set<String> ss = mc.getModules(ModuleContainer.ModuleStatusTristate.ENABLE);
+        Assert.assertTrue(ss.contains("prepass"));
+        Assert.assertFalse(ss.contains("prefail"));
+    }
 }

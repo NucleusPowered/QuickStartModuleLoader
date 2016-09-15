@@ -7,6 +7,7 @@ package uk.co.drnaylor.quickstart.config;
 import com.google.common.collect.Maps;
 import com.google.common.reflect.TypeToken;
 import ninja.leaping.configurate.ConfigurationNode;
+import ninja.leaping.configurate.commented.CommentedConfigurationNode;
 import ninja.leaping.configurate.objectmapping.ObjectMappingException;
 import uk.co.drnaylor.quickstart.LoggerProxy;
 import uk.co.drnaylor.quickstart.enums.LoadingStatus;
@@ -58,6 +59,11 @@ public final class ModulesConfigAdapter extends AbstractConfigAdapter<HashMap<St
     @Override
     @SuppressWarnings("unchecked")
     protected ConfigurationNode insertIntoConfigurateNode(HashMap<String, LoadingStatus> data) throws ObjectMappingException {
-        return this.getNewNode().setValue(tt, data);
+        ConfigurationNode cn = this.getNewNode().setValue(tt, data);
+        if (cn instanceof CommentedConfigurationNode) {
+            ((CommentedConfigurationNode) cn).setComment("Available modules to enable or disable. Set each to ENABLE to enable the module, DISABLE to prevent the module from loading or FORCELOAD to load the module even if something else tries to disable it.");
+        }
+
+        return cn;
     }
 }

@@ -10,10 +10,12 @@ import ninja.leaping.configurate.ConfigurationNode;
 import ninja.leaping.configurate.commented.CommentedConfigurationNode;
 import ninja.leaping.configurate.commented.SimpleCommentedConfigurationNode;
 import ninja.leaping.configurate.loader.ConfigurationLoader;
+import ninja.leaping.configurate.transformation.ConfigurationTransformation;
 import uk.co.drnaylor.quickstart.exceptions.IncorrectAdapterTypeException;
 import uk.co.drnaylor.quickstart.exceptions.NoModuleException;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.Map;
 import java.util.function.Supplier;
 
@@ -129,6 +131,22 @@ public class AbstractAdaptableConfig<N extends ConfigurationNode, T extends Conf
         });
 
         node.mergeValuesFrom(n);
+
+        // Now, we do transformations.
+        moduleConfigAdapters.forEach((k, v) -> {
+            List<AbstractConfigAdapter.Transformation> transformations = v.getTransformations();
+            if (!transformations.isEmpty() && v.isAttached()) {
+                ConfigurationNode nodeToTransform = node.getNode(k.toLowerCase());
+
+                if (!nodeToTransform.isVirtual()) {
+                    ConfigurationTransformation.Builder ctBuilder = ConfigurationTransformation.builder();
+                    transformations.forEach(x -> ctBuilder.addAction(x.getObjectPath(), x.getAction()));
+                    ctBuilder.build().apply(nodeToTransform);
+                    node.getNode(k.toLowerCase()).setValue(nodeToTransform);
+                }
+            }
+        });
+
         save();
     }
 }

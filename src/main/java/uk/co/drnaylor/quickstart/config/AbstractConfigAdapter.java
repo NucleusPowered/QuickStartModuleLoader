@@ -5,9 +5,12 @@
 package uk.co.drnaylor.quickstart.config;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Lists;
 import ninja.leaping.configurate.ConfigurationNode;
 import ninja.leaping.configurate.objectmapping.ObjectMappingException;
+import ninja.leaping.configurate.transformation.TransformAction;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -137,6 +140,15 @@ public abstract class AbstractConfigAdapter<R> {
     }
 
     /**
+     * Gets the transformations that are required to this section.
+     *
+     * @return The transformations that are required.
+     */
+    protected List<Transformation> getTransformations() {
+        return Lists.newArrayList();
+    }
+
+    /**
      * Provides the default set of data for this adapter.
      *
      * @param node An empty node to populate.
@@ -171,4 +183,30 @@ public abstract class AbstractConfigAdapter<R> {
      * @throws ObjectMappingException if the object could not be created.
      */
     protected abstract ConfigurationNode insertIntoConfigurateNode(R data) throws ObjectMappingException;
+
+    /**
+     * Represents a transformation to be made to the configuration BEFORE it is completely loaded.
+     */
+    protected static final class Transformation {
+        private final Object[] objectPath;
+        private final TransformAction action;
+
+        /**
+         * Creates the transformation that is required.
+         *  @param objectPath The node to transform relative to this configuration object.
+         * @param action The {@link TransformAction} containing the transformation.
+         */
+        public Transformation(Object[] objectPath, TransformAction action) {
+            this.objectPath = objectPath;
+            this.action = action;
+        }
+
+        Object[] getObjectPath() {
+            return objectPath;
+        }
+
+        TransformAction getAction() {
+            return action;
+        }
+    }
 }

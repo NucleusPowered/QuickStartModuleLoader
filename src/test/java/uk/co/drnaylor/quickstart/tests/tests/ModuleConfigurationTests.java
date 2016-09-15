@@ -9,6 +9,7 @@ import org.junit.Assert;
 import org.junit.Test;
 import uk.co.drnaylor.quickstart.ModuleContainer;
 import uk.co.drnaylor.quickstart.tests.config.adapters.SimpleWithDefault;
+import uk.co.drnaylor.quickstart.tests.config.adapters.SimpleWithDefaultAndTransform;
 import uk.co.drnaylor.quickstart.tests.scaffolding.FakeLoaderTests;
 
 import static org.junit.Assert.assertEquals;
@@ -41,5 +42,19 @@ public class ModuleConfigurationTests extends FakeLoaderTests {
 
         // Now it should have done.
         Assert.assertEquals("result", n.getNode("moduletwo", "newnode").getString());
+    }
+
+    @Test
+    public void testThatUsingATransformationActuallyWorks() throws Exception {
+        // When we load these modules...
+        ModuleContainer mc = getContainer("uk.co.drnaylor.quickstart.tests.modules.adapterstransformtest");
+        mc.loadModules(true);
+
+        SimpleWithDefaultAndTransform s2 = mc.getConfigAdapterForModule("moduleone", SimpleWithDefaultAndTransform.class);
+
+        Assert.assertTrue(s2.getNode().getNode("test2").isVirtual());
+        Assert.assertFalse(s2.getNode().getNode("testmove").isVirtual());
+        Assert.assertEquals("test2", s2.getNode().getNode("testmove").getString());
+        Assert.assertEquals("test", s2.getNode().getNode("test").getString());
     }
 }

@@ -18,6 +18,7 @@ import uk.co.drnaylor.quickstart.modulecontainers.ProvidedModuleContainer;
 import java.util.Arrays;
 import java.util.stream.Collectors;
 
+import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -31,7 +32,9 @@ public class FakeLoaderTests {
     public void beforeTests() throws Exception {
         loader = (ConfigurationLoader<ConfigurationNode>)mock(ConfigurationLoader.class);
         when(loader.createEmptyNode()).thenReturn(SimpleConfigurationNode.root());
+        when(loader.createEmptyNode(any(ConfigurationOptions.class))).thenReturn(SimpleConfigurationNode.root());
         when(loader.load()).thenReturn(n);
+        when(loader.load(any(ConfigurationOptions.class))).thenReturn(n);
         when(loader.getDefaultOptions()).thenReturn(ConfigurationOptions.defaults());
     }
 

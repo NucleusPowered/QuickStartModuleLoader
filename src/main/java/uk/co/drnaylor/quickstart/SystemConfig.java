@@ -6,6 +6,7 @@ package uk.co.drnaylor.quickstart;
 
 import com.google.common.base.Preconditions;
 import ninja.leaping.configurate.ConfigurationNode;
+import ninja.leaping.configurate.ConfigurationOptions;
 import ninja.leaping.configurate.loader.ConfigurationLoader;
 import uk.co.drnaylor.quickstart.config.AbstractAdaptableConfig;
 import uk.co.drnaylor.quickstart.config.AbstractConfigAdapter;
@@ -15,6 +16,7 @@ import uk.co.drnaylor.quickstart.enums.LoadingStatus;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.function.Function;
 
 /**
  * Defines the configuration file that loads the modules, and any {@link AbstractConfigAdapter}s.
@@ -25,8 +27,8 @@ public final class SystemConfig<N extends ConfigurationNode, T extends Configura
     private final LoggerProxy proxy;
     private ModulesConfigAdapter configAdapter;
 
-    SystemConfig(T loader, LoggerProxy proxy) throws IOException {
-        super(loader);
+    SystemConfig(T loader, LoggerProxy proxy, Function<ConfigurationOptions, ConfigurationOptions> optionsTransformer) throws IOException {
+        super(loader, () -> loader.createEmptyNode(optionsTransformer.apply(loader.getDefaultOptions())), optionsTransformer);
         this.proxy = proxy;
     }
 

@@ -9,6 +9,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import com.google.common.reflect.ClassPath;
 import ninja.leaping.configurate.ConfigurationNode;
+import ninja.leaping.configurate.ConfigurationOptions;
 import ninja.leaping.configurate.loader.ConfigurationLoader;
 import uk.co.drnaylor.quickstart.*;
 import uk.co.drnaylor.quickstart.exceptions.QuickStartModuleDiscoveryException;
@@ -17,6 +18,7 @@ import uk.co.drnaylor.quickstart.loaders.ModuleEnabler;
 import uk.co.drnaylor.quickstart.loaders.SimpleModuleConstructor;
 
 import java.util.Set;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 public final class DiscoveryModuleContainer extends ModuleContainer {
@@ -62,10 +64,12 @@ public final class DiscoveryModuleContainer extends ModuleContainer {
      * @param onPreEnable         The {@link Procedure} to run on pre enable, before modules are pre-enabled.
      * @param onEnable            The {@link Procedure} to run on enable, before modules are pre-enabled.
      * @param onPostEnable        The {@link Procedure} to run on post enable, before modules are pre-enabled.
+     * @param function            The {@link Function} that transforms the {@link ConfigurationOptions}.
+     *
      * @throws QuickStartModuleDiscoveryException if there is an error starting the Module Container.
      */
-    private <N extends ConfigurationNode> DiscoveryModuleContainer(ConfigurationLoader<N> configurationLoader, ClassLoader loader, String packageBase, ModuleConstructor constructor, ModuleEnabler enabler, LoggerProxy loggerProxy, Procedure onPreEnable, Procedure onEnable, Procedure onPostEnable) throws QuickStartModuleDiscoveryException {
-        super(configurationLoader, loggerProxy, enabler, onPreEnable, onEnable, onPostEnable);
+    private <N extends ConfigurationNode> DiscoveryModuleContainer(ConfigurationLoader<N> configurationLoader, ClassLoader loader, String packageBase, ModuleConstructor constructor, ModuleEnabler enabler, LoggerProxy loggerProxy, Procedure onPreEnable, Procedure onEnable, Procedure onPostEnable, Function<ConfigurationOptions, ConfigurationOptions> function) throws QuickStartModuleDiscoveryException {
+        super(configurationLoader, loggerProxy, enabler, onPreEnable, onEnable, onPostEnable, function);
         this.classLoader = loader;
         this.constructor = constructor;
         this.packageLocation = packageBase;
@@ -167,7 +171,7 @@ public final class DiscoveryModuleContainer extends ModuleContainer {
 
             checkBuild();
             return new DiscoveryModuleContainer(configurationLoader, classLoader, packageToScan, constructor, enabler, loggerProxy,
-                    onPreEnable, onEnable, onPostEnable);
+                    onPreEnable, onEnable, onPostEnable, configurationOptionsTransformer);
         }
     }
 }

@@ -8,6 +8,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import ninja.leaping.configurate.ConfigurationNode;
+import ninja.leaping.configurate.ConfigurationOptions;
 import ninja.leaping.configurate.loader.ConfigurationLoader;
 import ninja.leaping.configurate.objectmapping.ObjectMappingException;
 import uk.co.drnaylor.quickstart.annotations.ModuleData;
@@ -21,6 +22,7 @@ import uk.co.drnaylor.quickstart.loaders.ModuleEnabler;
 import java.io.IOException;
 import java.text.MessageFormat;
 import java.util.*;
+import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
@@ -71,7 +73,7 @@ public abstract class ModuleContainer {
     private final Procedure onPostEnable;
 
     /**
-     * Provides
+     * Provides a way to enable modules.
      */
     private final ModuleEnabler enabler;
 
@@ -85,6 +87,7 @@ public abstract class ModuleContainer {
      * @param onPreEnable         The {@link Procedure} to run on pre enable, before modules are pre-enabled.
      * @param onEnable            The {@link Procedure} to run on enable, before modules are pre-enabled.
      * @param onPostEnable        The {@link Procedure} to run on post enable, before modules are pre-enabled.
+     * @param configOptions       The {@link Function} that converts {@link ConfigurationOptions}.
      *
      * @throws QuickStartModuleDiscoveryException if there is an error starting the Module Container.
      */
@@ -93,10 +96,11 @@ public abstract class ModuleContainer {
                                                             ModuleEnabler moduleEnabler,
                                                             Procedure onPreEnable,
                                                             Procedure onEnable,
-                                                            Procedure onPostEnable) throws QuickStartModuleDiscoveryException {
+                                                            Procedure onPostEnable,
+                                                            Function<ConfigurationOptions, ConfigurationOptions> configOptions) throws QuickStartModuleDiscoveryException {
 
         try {
-            this.config = new SystemConfig<>(configurationLoader, loggerProxy);
+            this.config = new SystemConfig<>(configurationLoader, loggerProxy, configOptions);
             this.loggerProxy = loggerProxy;
             this.enabler = moduleEnabler;
             this.onPreEnable = onPreEnable;
@@ -288,8 +292,8 @@ public abstract class ModuleContainer {
      * @param failOnOneError If set to <code>true</code>, one module failure will mark the whole loading sequence as failed.
      *                       Otherwise, no modules being constructed will cause a failure.
      *
-     * @throws uk.co.drnaylor.quickstart.exceptions.QuickStartModuleLoaderException.Construction if the modules cannot be constructed.
-     * @throws uk.co.drnaylor.quickstart.exceptions.QuickStartModuleLoaderException.Enabling if the modules cannot be enabled.
+     * @throws QuickStartModuleLoaderException.Construction if the modules cannot be constructed.
+     * @throws QuickStartModuleLoaderException.Enabling if the modules cannot be enabled.
      */
     public void loadModules(boolean failOnOneError) throws QuickStartModuleLoaderException.Construction, QuickStartModuleLoaderException.Enabling {
         Preconditions.checkArgument(currentPhase == ConstructionPhase.DISCOVERED);
@@ -444,6 +448,7 @@ public abstract class ModuleContainer {
         protected Procedure onPreEnable = () -> {};
         protected Procedure onEnable = () -> {};
         protected Procedure onPostEnable = () -> {};
+        protected Function<ConfigurationOptions, ConfigurationOptions> configurationOptionsTransformer = x -> x;
         protected ModuleEnabler enabler = ModuleEnabler.SIMPLE_INSTANCE;
 
         protected abstract T getThis();
@@ -456,6 +461,23 @@ public abstract class ModuleContainer {
          */
         public T setConfigurationLoader(ConfigurationLoader<? extends ConfigurationNode> configurationLoader) {
             this.configurationLoader = configurationLoader;
+            return getThis();
+        }
+
+        /**
+         * Sets a {@link Function} that takes the loader's {@link ConfigurationOptions}, transforms it, and applies it
+         * to nodes when they are loaded.
+         *
+         * <p>
+         *     By default, just uses the {@link ConfigurationOptions} of the loader.
+         * </p>
+         *
+         * @param optionsTransformer The transformer
+         * @return This {@link Builder} for chaining.
+         */
+        public T setConfigurationOptionsTransformer(Function<ConfigurationOptions, ConfigurationOptions> optionsTransformer) {
+            Preconditions.checkNotNull(optionsTransformer);
+            this.configurationOptionsTransformer = optionsTransformer;
             return getThis();
         }
 

@@ -6,6 +6,7 @@ package uk.co.drnaylor.quickstart.modulecontainers;
 
 import com.google.common.base.Preconditions;
 import ninja.leaping.configurate.ConfigurationNode;
+import ninja.leaping.configurate.ConfigurationOptions;
 import ninja.leaping.configurate.loader.ConfigurationLoader;
 import uk.co.drnaylor.quickstart.*;
 import uk.co.drnaylor.quickstart.exceptions.NoModuleException;
@@ -14,6 +15,7 @@ import uk.co.drnaylor.quickstart.loaders.ModuleEnabler;
 
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 public final class ProvidedModuleContainer extends ModuleContainer {
@@ -34,10 +36,19 @@ public final class ProvidedModuleContainer extends ModuleContainer {
      * @param onEnable            The {@link Procedure} to run on enable, before modules are pre-enabled.
      * @param onPostEnable        The {@link Procedure} to run on post enable, before modules are pre-enabled.
      * @param modules             The {@link Module}s to load.
+     * @param function            The {@link Function} that converts {@link ConfigurationOptions}.
+     *
      * @throws QuickStartModuleDiscoveryException if there is an error starting the Module Container.
      */
-    private <N extends ConfigurationNode> ProvidedModuleContainer(ConfigurationLoader<N> configurationLoader, LoggerProxy loggerProxy, ModuleEnabler moduleEnabler, Procedure onPreEnable, Procedure onEnable, Procedure onPostEnable, Set<Module> modules) throws QuickStartModuleDiscoveryException {
-        super(configurationLoader, loggerProxy, moduleEnabler, onPreEnable, onEnable, onPostEnable);
+    private <N extends ConfigurationNode> ProvidedModuleContainer(ConfigurationLoader<N> configurationLoader,
+                                                                  LoggerProxy loggerProxy,
+                                                                  ModuleEnabler moduleEnabler,
+                                                                  Procedure onPreEnable,
+                                                                  Procedure onEnable,
+                                                                  Procedure onPostEnable,
+                                                                  Set<Module> modules,
+                                                                  Function<ConfigurationOptions, ConfigurationOptions> function) throws QuickStartModuleDiscoveryException {
+        super(configurationLoader, loggerProxy, moduleEnabler, onPreEnable, onEnable, onPostEnable, function);
         moduleMap = modules.stream().collect(Collectors.toMap(Module::getClass, v -> v));
     }
 
@@ -92,7 +103,7 @@ public final class ProvidedModuleContainer extends ModuleContainer {
 
             checkBuild();
 
-            return new ProvidedModuleContainer(configurationLoader, loggerProxy, enabler, onPreEnable, onEnable, onPostEnable, modules);
+            return new ProvidedModuleContainer(configurationLoader, loggerProxy, enabler, onPreEnable, onEnable, onPostEnable, modules, configurationOptionsTransformer);
         }
     }
 }

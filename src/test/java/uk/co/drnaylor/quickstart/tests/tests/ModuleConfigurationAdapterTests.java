@@ -6,6 +6,7 @@ package uk.co.drnaylor.quickstart.tests.tests;
 
 import com.google.common.collect.Maps;
 import ninja.leaping.configurate.ConfigurationNode;
+import ninja.leaping.configurate.ConfigurationOptions;
 import ninja.leaping.configurate.loader.ConfigurationLoader;
 import ninja.leaping.configurate.objectmapping.ObjectMappingException;
 import org.junit.Assert;
@@ -22,6 +23,7 @@ import uk.co.drnaylor.quickstart.tests.scaffolding.FakeLoaderTests;
 import java.lang.reflect.Constructor;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.function.Function;
 
 public class ModuleConfigurationAdapterTests extends FakeLoaderTests {
 
@@ -34,7 +36,10 @@ public class ModuleConfigurationAdapterTests extends FakeLoaderTests {
 
         Constructor<?> ctor = SystemConfig.class.getDeclaredConstructors()[0];
         ctor.setAccessible(true);
-        config = (SystemConfig<ConfigurationNode, ConfigurationLoader<ConfigurationNode>>) ctor.newInstance(loader, DefaultLogger.INSTANCE);
+        config = (SystemConfig<ConfigurationNode, ConfigurationLoader<ConfigurationNode>>) ctor.newInstance(
+                loader,
+                DefaultLogger.INSTANCE,
+                (Function<ConfigurationOptions, ConfigurationOptions>) configurationOptions -> configurationOptions);
 
         HashMap<String, LoadingStatus> m = Maps.newHashMap();
         m.put("d", LoadingStatus.DISABLED);

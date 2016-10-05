@@ -7,6 +7,7 @@ package uk.co.drnaylor.quickstart.config;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Maps;
 import ninja.leaping.configurate.ConfigurationNode;
+import ninja.leaping.configurate.ConfigurationOptions;
 import ninja.leaping.configurate.commented.CommentedConfigurationNode;
 import ninja.leaping.configurate.commented.SimpleCommentedConfigurationNode;
 import ninja.leaping.configurate.loader.ConfigurationLoader;
@@ -17,6 +18,7 @@ import uk.co.drnaylor.quickstart.exceptions.NoModuleException;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 import java.util.function.Supplier;
 
 /**
@@ -32,17 +34,19 @@ public class AbstractAdaptableConfig<N extends ConfigurationNode, T extends Conf
     private final T loader;
     private N node;
     private final Supplier<ConfigurationNode> nodeCreator;
+    private final Function<ConfigurationOptions, ConfigurationOptions> optionsTransformer;
 
     public AbstractAdaptableConfig(T loader) throws IOException {
-        this(loader, loader::createEmptyNode);
+        this(loader, loader::createEmptyNode, x -> x);
     }
 
-    public AbstractAdaptableConfig(T loader, Supplier<ConfigurationNode> nodeCreator) throws IOException {
+    public AbstractAdaptableConfig(T loader, Supplier<ConfigurationNode> nodeCreator, Function<ConfigurationOptions, ConfigurationOptions> optionsTransformer) throws IOException {
         Preconditions.checkNotNull(loader);
         Preconditions.checkNotNull(nodeCreator);
 
         this.loader = loader;
         this.nodeCreator = nodeCreator;
+        this.optionsTransformer = optionsTransformer;
         load();
     }
 
@@ -52,7 +56,7 @@ public class AbstractAdaptableConfig<N extends ConfigurationNode, T extends Conf
      * @throws IOException if the file could not be loaded.
      */
     public void load() throws IOException {
-        this.node = loader.load();
+        this.node = loader.load(optionsTransformer.apply(loader.getDefaultOptions()));
     }
 
     /**

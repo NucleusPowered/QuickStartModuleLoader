@@ -33,6 +33,7 @@ license {
     ext.name = 'QuickStart Module Loader'
 
     exclude "**/*.info"
+    exclude "**/*.json"
     exclude "assets/**"
     exclude "*.properties"
 

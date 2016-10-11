@@ -5,12 +5,14 @@
 package uk.co.drnaylor.quickstart.config;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import ninja.leaping.configurate.ConfigurationNode;
 import ninja.leaping.configurate.ConfigurationOptions;
 import ninja.leaping.configurate.commented.CommentedConfigurationNode;
 import ninja.leaping.configurate.commented.SimpleCommentedConfigurationNode;
 import ninja.leaping.configurate.loader.ConfigurationLoader;
+import ninja.leaping.configurate.objectmapping.ObjectMappingException;
 import ninja.leaping.configurate.transformation.ConfigurationTransformation;
 import uk.co.drnaylor.quickstart.exceptions.IncorrectAdapterTypeException;
 import uk.co.drnaylor.quickstart.exceptions.NoModuleException;
@@ -60,6 +62,15 @@ public class AbstractAdaptableConfig<N extends ConfigurationNode, T extends Conf
     }
 
     /**
+     * Gets all the config adapters associated with this configuration.
+     *
+     * @return An {@link ImmutableMap} that contains all the adapters.
+     */
+    public final Map<String, ? extends AbstractConfigAdapter<?>> getAllConfigAdapters() {
+        return ImmutableMap.copyOf(moduleConfigAdapters);
+    }
+
+    /**
      * Gets a currently attached {@link AbstractConfigAdapter}
      *
      * @param module The module to get the adapter for
@@ -106,12 +117,36 @@ public class AbstractAdaptableConfig<N extends ConfigurationNode, T extends Conf
         moduleConfigAdapters.put(module.toLowerCase(), configAdapter);
     }
 
+    public void refreshConfigurationNode() {
+        moduleConfigAdapters.values().forEach(x -> {
+            try {
+                x.refreshConfigurationNode();
+            } catch (ObjectMappingException e) {
+                e.printStackTrace();
+            }
+        });
+    }
+
     /**
      * Saves the configuration.
      *
      * @throws IOException if the configuration could not be saved.
      */
     public void save() throws IOException {
+        save(false);
+    }
+
+    /**
+     * Saves the configuration, optionally refreshing the config nodes with the latest fields.
+     *
+     * @param refresh {@code true} if so.
+     * @throws IOException if the configuration could not be saved.
+     */
+    public void save(boolean refresh) throws IOException {
+        if (refresh) {
+            refreshConfigurationNode();
+        }
+
         loader.save(node);
     }
 

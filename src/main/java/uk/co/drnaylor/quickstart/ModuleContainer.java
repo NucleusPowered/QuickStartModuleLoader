@@ -16,12 +16,21 @@ import uk.co.drnaylor.quickstart.config.AbstractConfigAdapter;
 import uk.co.drnaylor.quickstart.enums.ConstructionPhase;
 import uk.co.drnaylor.quickstart.enums.LoadingStatus;
 import uk.co.drnaylor.quickstart.enums.ModulePhase;
-import uk.co.drnaylor.quickstart.exceptions.*;
+import uk.co.drnaylor.quickstart.exceptions.IncorrectAdapterTypeException;
+import uk.co.drnaylor.quickstart.exceptions.NoModuleException;
+import uk.co.drnaylor.quickstart.exceptions.QuickStartModuleDiscoveryException;
+import uk.co.drnaylor.quickstart.exceptions.QuickStartModuleLoaderException;
+import uk.co.drnaylor.quickstart.exceptions.UndisableableModuleException;
 import uk.co.drnaylor.quickstart.loaders.ModuleEnabler;
 
 import java.io.IOException;
 import java.text.MessageFormat;
-import java.util.*;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -427,6 +436,15 @@ public abstract class ModuleContainer {
      */
     public final void saveSystemConfig() throws IOException {
         config.save();
+    }
+
+    /**
+     * Refreshes the backing {@link ConfigurationNode} and saves the {@link SystemConfig}.
+     *
+     * @throws IOException If the config could not be saved.
+     */
+    public final void refreshSystemConfig() throws IOException {
+        config.save(true);
     }
 
     /**

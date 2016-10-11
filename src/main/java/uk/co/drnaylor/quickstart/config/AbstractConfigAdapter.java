@@ -121,6 +121,14 @@ public abstract class AbstractConfigAdapter<R> {
     }
 
     /**
+     * Updates the {@link ConfigurationNode} in memory with any changes that may occur due to a change in {@link R}.
+     * @throws ObjectMappingException if the object could not be created and/or saved.
+     */
+    final void refreshConfigurationNode() throws ObjectMappingException {
+        setNode(getNode());
+    }
+
+    /**
      * Convenience method that allows a new {@link ConfigurationNode} of the correct type to be produced.
      *
      * @return The node.

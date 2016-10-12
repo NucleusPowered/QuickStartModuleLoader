@@ -7,6 +7,7 @@ package uk.co.drnaylor.quickstart.config;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import ninja.leaping.configurate.ConfigurationNode;
+import ninja.leaping.configurate.ConfigurationOptions;
 import ninja.leaping.configurate.objectmapping.ObjectMappingException;
 import ninja.leaping.configurate.transformation.TransformAction;
 
@@ -111,13 +112,13 @@ public abstract class AbstractConfigAdapter<R> {
      * Saves the data that this adapter manages back to the config manager.
      *
      * @param data An object of type {@link R}.
-     * @see #insertIntoConfigurateNode(Object)
+     * @see #insertIntoConfigurateNode(ConfigurationNode, Object)
      * @throws ObjectMappingException if the object could not be saved.
      */
     public final void setNode(R data) throws ObjectMappingException {
         Preconditions.checkState(attachedConfig != null, "You must attach this adapter before using it.");
 
-        nodeSaver.accept(insertIntoConfigurateNode(data));
+        nodeSaver.accept(insertIntoConfigurateNode(getNewNode(), data));
     }
 
     /**
@@ -187,10 +188,11 @@ public abstract class AbstractConfigAdapter<R> {
      * </p>
      *
      * @param data The object to convert into a config node.
+     * @param newNode A new node with the adapter's {@link ConfigurationOptions}, created by {@link #getNewNode()}
      * @return The {@link ConfigurationNode}
      * @throws ObjectMappingException if the object could not be created.
      */
-    protected abstract ConfigurationNode insertIntoConfigurateNode(R data) throws ObjectMappingException;
+    protected abstract ConfigurationNode insertIntoConfigurateNode(ConfigurationNode newNode, R data) throws ObjectMappingException;
 
     /**
      * Represents a transformation to be made to the configuration BEFORE it is completely loaded.

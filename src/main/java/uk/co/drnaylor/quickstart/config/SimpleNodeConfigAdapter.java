@@ -20,7 +20,7 @@ public class SimpleNodeConfigAdapter extends AbstractConfigAdapter<Configuration
     }
 
     @Override
-    protected ConfigurationNode insertIntoConfigurateNode(ConfigurationNode data) throws ObjectMappingException {
+    protected ConfigurationNode insertIntoConfigurateNode(ConfigurationNode newNode, ConfigurationNode data) throws ObjectMappingException {
         return data;
     }
 }

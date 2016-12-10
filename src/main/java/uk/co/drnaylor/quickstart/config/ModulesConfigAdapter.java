@@ -61,7 +61,8 @@ public final class ModulesConfigAdapter extends AbstractConfigAdapter<HashMap<St
     protected ConfigurationNode insertIntoConfigurateNode(ConfigurationNode cn, HashMap<String, LoadingStatus> data) throws ObjectMappingException {
         cn.setValue(tt, data);
         if (cn instanceof CommentedConfigurationNode) {
-            ((CommentedConfigurationNode) cn).setComment("Available modules to enable or disable. Set each to ENABLE to enable the module, DISABLE to prevent the module from loading or FORCELOAD to load the module even if something else tries to disable it.");
+            ((CommentedConfigurationNode) cn).setComment("Available modules to enable or disable. Set each to ENABLED to enable the module, DISABLED"
+                    + " to prevent the module from loading or FORCELOAD to load the module even if something else tries to disable it.");
         }
 
         return cn;

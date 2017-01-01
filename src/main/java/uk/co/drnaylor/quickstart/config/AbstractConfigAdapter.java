@@ -202,6 +202,27 @@ public abstract class AbstractConfigAdapter<R> {
         private final TransformAction action;
 
         /**
+         * Move a top level key to a new key.
+         *
+         * @param topLevel The key to move the configuration from.
+         * @param to The key to move the configuration to.
+         * @return The {@link Transformation}
+         */
+        public static Transformation moveTopLevel(String topLevel, String... to) {
+            return new Transformation(new Object[] { topLevel }, (i, v) -> to);
+        }
+
+        /**
+         * Move a config from a key.
+         *
+         * @param from The key to move from.
+         * @return An object where the destination node is specified.
+         */
+        public static From moveFrom(String... from) {
+            return new From(from);
+        }
+
+        /**
          * Creates the transformation that is required.
          *  @param objectPath The node to transform relative to this configuration object.
          * @param action The {@link TransformAction} containing the transformation.
@@ -217,6 +238,25 @@ public abstract class AbstractConfigAdapter<R> {
 
         TransformAction getAction() {
             return action;
+        }
+
+        protected static class From {
+
+            private final Object[] from;
+
+            private From(Object[] from) {
+                this.from = from;
+            }
+
+            /**
+             * The key to move the config node to.
+             *
+             * @param to The key.
+             * @return The {@link Transformation}
+             */
+            public Transformation to(String... to) {
+                return new Transformation(from, (i, v) -> to);
+            }
         }
     }
 }

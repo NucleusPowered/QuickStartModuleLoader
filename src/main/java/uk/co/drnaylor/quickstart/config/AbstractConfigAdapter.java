@@ -240,7 +240,7 @@ public abstract class AbstractConfigAdapter<R> {
             return action;
         }
 
-        protected static class From {
+        public final static class From {
 
             private final Object[] from;
 

@@ -8,7 +8,12 @@ import com.google.common.base.Preconditions;
 import ninja.leaping.configurate.ConfigurationNode;
 import ninja.leaping.configurate.ConfigurationOptions;
 import ninja.leaping.configurate.loader.ConfigurationLoader;
-import uk.co.drnaylor.quickstart.*;
+import uk.co.drnaylor.quickstart.LoggerProxy;
+import uk.co.drnaylor.quickstart.Module;
+import uk.co.drnaylor.quickstart.ModuleContainer;
+import uk.co.drnaylor.quickstart.ModuleSpec;
+import uk.co.drnaylor.quickstart.Procedure;
+import uk.co.drnaylor.quickstart.annotations.ModuleData;
 import uk.co.drnaylor.quickstart.exceptions.NoModuleException;
 import uk.co.drnaylor.quickstart.exceptions.QuickStartModuleDiscoveryException;
 import uk.co.drnaylor.quickstart.loaders.ModuleEnabler;
@@ -37,6 +42,7 @@ public final class ProvidedModuleContainer extends ModuleContainer {
      * @param onPostEnable        The {@link Procedure} to run on post enable, before modules are pre-enabled.
      * @param modules             The {@link Module}s to load.
      * @param function            The {@link Function} that converts {@link ConfigurationOptions}.
+     * @param requireAnnotation   Whether modules require a {@link ModuleData} annotation.
      *
      * @throws QuickStartModuleDiscoveryException if there is an error starting the Module Container.
      */
@@ -47,8 +53,9 @@ public final class ProvidedModuleContainer extends ModuleContainer {
                                                                   Procedure onEnable,
                                                                   Procedure onPostEnable,
                                                                   Set<Module> modules,
-                                                                  Function<ConfigurationOptions, ConfigurationOptions> function) throws QuickStartModuleDiscoveryException {
-        super(configurationLoader, loggerProxy, moduleEnabler, onPreEnable, onEnable, onPostEnable, function);
+                                                                  Function<ConfigurationOptions, ConfigurationOptions> function,
+                                                                  boolean requireAnnotation) throws QuickStartModuleDiscoveryException {
+        super(configurationLoader, loggerProxy, moduleEnabler, onPreEnable, onEnable, onPostEnable, function, requireAnnotation);
         moduleMap = modules.stream().collect(Collectors.toMap(Module::getClass, v -> v));
     }
 
@@ -103,7 +110,8 @@ public final class ProvidedModuleContainer extends ModuleContainer {
 
             checkBuild();
 
-            return new ProvidedModuleContainer(configurationLoader, loggerProxy, enabler, onPreEnable, onEnable, onPostEnable, modules, configurationOptionsTransformer);
+            return new ProvidedModuleContainer(configurationLoader, loggerProxy, enabler, onPreEnable, onEnable, onPostEnable,
+                    modules, configurationOptionsTransformer, requireAnnotation);
         }
     }
 }

@@ -87,6 +87,11 @@ public abstract class ModuleContainer {
     private final ModuleEnabler enabler;
 
     /**
+     * Whether the {@link ModuleData} annotation must be present on modules.
+     */
+    private final boolean requireAnnotation;
+
+    /**
      * Constructs a {@link ModuleContainer} and starts discovery of the modules.
      *
      * @param <N>                 The type of {@link ConfigurationNode} to use.
@@ -97,6 +102,7 @@ public abstract class ModuleContainer {
      * @param onEnable            The {@link Procedure} to run on enable, before modules are pre-enabled.
      * @param onPostEnable        The {@link Procedure} to run on post enable, before modules are pre-enabled.
      * @param configOptions       The {@link Function} that converts {@link ConfigurationOptions}.
+     * @param requireAnnotation   Whether modules must have the {@link ModuleData} annotation.
      *
      * @throws QuickStartModuleDiscoveryException if there is an error starting the Module Container.
      */
@@ -106,7 +112,8 @@ public abstract class ModuleContainer {
                                                             Procedure onPreEnable,
                                                             Procedure onEnable,
                                                             Procedure onPostEnable,
-                                                            Function<ConfigurationOptions, ConfigurationOptions> configOptions) throws QuickStartModuleDiscoveryException {
+                                                            Function<ConfigurationOptions, ConfigurationOptions> configOptions,
+                                                            boolean requireAnnotation) throws QuickStartModuleDiscoveryException {
 
         try {
             this.config = new SystemConfig<>(configurationLoader, loggerProxy, configOptions);
@@ -115,6 +122,7 @@ public abstract class ModuleContainer {
             this.onPreEnable = onPreEnable;
             this.onPostEnable = onPostEnable;
             this.onEnable = onEnable;
+            this.requireAnnotation = requireAnnotation;
         } catch (Exception e) {
             throw new QuickStartModuleDiscoveryException("Unable to start QuickStart", e);
         }
@@ -132,6 +140,9 @@ public abstract class ModuleContainer {
                 if (s.isAnnotationPresent(ModuleData.class)) {
                     ModuleData md = s.getAnnotation(ModuleData.class);
                     discovered.put(md.id().toLowerCase(), new ModuleSpec(s, md));
+                } else if (this.requireAnnotation) {
+                    loggerProxy.warn(MessageFormat.format("The module class {0} does not have a ModuleData annotation associated with it. "
+                            + "It is not being loaded as the module container requires the annotation to be present.", s.getClass().getName()));
                 } else {
                     String id = s.getClass().getName().toLowerCase();
                     loggerProxy.warn(MessageFormat.format("The module {0} does not have a ModuleData annotation associated with it. We're just assuming an ID of {0}.", id));
@@ -462,6 +473,7 @@ public abstract class ModuleContainer {
     protected static abstract class Builder<R extends ModuleContainer, T extends Builder<R, T>> {
 
         protected ConfigurationLoader<? extends ConfigurationNode> configurationLoader;
+        protected boolean requireAnnotation = false;
         protected LoggerProxy loggerProxy;
         protected Procedure onPreEnable = () -> {};
         protected Procedure onEnable = () -> {};
@@ -554,6 +566,17 @@ public abstract class ModuleContainer {
          */
         public T setModuleEnabler(ModuleEnabler enabler) {
             this.enabler = enabler;
+            return getThis();
+        }
+
+        /**
+         * Sets whether {@link Module}s must have a {@link ModuleData} annotation to be considered.
+         *
+         * @param requireAnnotation <code>true</code> to require, <code>false</code> otherwise.
+         * @return The {@link Builder}, for chaining.
+         */
+        public T setRequireModuleDataAnnotation(boolean requireAnnotation) {
+            this.requireAnnotation = requireAnnotation;
             return getThis();
         }
 

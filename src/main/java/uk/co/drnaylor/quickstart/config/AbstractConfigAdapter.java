@@ -60,6 +60,17 @@ public abstract class AbstractConfigAdapter<R> {
         onAttach(module, adapter);
     }
 
+    final void detachConfig() {
+        Preconditions.checkState(attachedConfig != null);
+        onDetach(this.module, this.attachedConfig);
+
+        this.module = null;
+        this.attachedConfig = null;
+        this.nodeGetter = null;
+        this.nodeSaver = null;
+        this.nodeCreator = null;
+    }
+
     /**
      * Runs when the config has been attached.
      *
@@ -67,6 +78,14 @@ public abstract class AbstractConfigAdapter<R> {
      * @param adapter The {@link AbstractAdaptableConfig} that it has been attached to.
      */
     public void onAttach(String module, AbstractAdaptableConfig<?, ?> adapter) {}
+
+    /**
+     * Runs when the config has been detached.
+     *
+     * @param module The module it is about to be detached from.
+     * @param adapter The {@link AbstractAdaptableConfig} that it is about to be detached from.
+     */
+    public void onDetach(String module, AbstractAdaptableConfig<?, ?> adapter) {}
 
     /**
      * Returns whether this adapter has been attached to a config file.

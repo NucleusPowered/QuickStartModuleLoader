@@ -117,7 +117,20 @@ public class AbstractAdaptableConfig<N extends ConfigurationNode, T extends Conf
         moduleConfigAdapters.put(module.toLowerCase(), configAdapter);
     }
 
-    public void refreshConfigurationNode() {
+    /**
+     * Detaches a module's {@link AbstractConfigAdapter} from this {@link AbstractAdaptableConfig}.
+     *
+     * @param module The name of the module that this configuration should be detached from.
+     * @return if the detachment was successful.
+     */
+    public final boolean detachConfigAdapter(String module) {
+        return moduleConfigAdapters.remove(module.toLowerCase()) != null;
+    }
+
+    /**
+     * Refreshes the configuration node.
+     */
+    public final void refreshConfigurationNode() {
         moduleConfigAdapters.values().forEach(x -> {
             try {
                 x.refreshConfigurationNode();

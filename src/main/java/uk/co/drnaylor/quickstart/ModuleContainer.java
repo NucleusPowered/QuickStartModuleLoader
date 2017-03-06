@@ -57,6 +57,11 @@ public abstract class ModuleContainer {
     protected final Map<String, ModuleSpec> discoveredModules = Maps.newLinkedHashMap();
 
     /**
+     * Loaded modules that can be disabled.
+     */
+    protected final Map<String, Module.RuntimeDisableable> enabledDisableableModules = Maps.newHashMap();
+
+    /**
      * Contains the main configuration file.
      */
     protected final SystemConfig<?, ? extends ConfigurationLoader<?>> config;
@@ -189,11 +194,11 @@ public abstract class ModuleContainer {
 
     private void resolveDependencyOrder(Map<String, ModuleSpec> modules) throws Exception {
         // First, get the modules that have no deps.
-        processDependencyStep(modules, x -> x.getValue().getDeps().isEmpty() && x.getValue().getSoftDeps().isEmpty());
+        processDependencyStep(modules, x -> x.getValue().getDependencies().isEmpty() && x.getValue().getSoftDependencies().isEmpty());
 
         while (!modules.isEmpty()) {
             Set<String> addedModules = discoveredModules.keySet();
-            processDependencyStep(modules, x -> addedModules.containsAll(x.getValue().getDeps()) && addedModules.containsAll(x.getValue().getSoftDeps()));
+            processDependencyStep(modules, x -> addedModules.containsAll(x.getValue().getDependencies()) && addedModules.containsAll(x.getValue().getSoftDependencies()));
         }
     }
 
@@ -278,26 +283,43 @@ public abstract class ModuleContainer {
     }
 
     /**
-     * Requests that a module be disabled. This can only be run during the {@link ConstructionPhase#DISCOVERED} phase.
+     * Requests that a module be disabled. This can only be run during the {@link ConstructionPhase#DISCOVERED} phase, or for
+     * {@link Module.RuntimeDisableable} modules, {@link ConstructionPhase#ENABLED}.
      *
      * @param moduleName The ID of the module.
      * @throws UndisableableModuleException if the module can't be disabled.
      * @throws NoModuleException if the module does not exist.
      */
     public void disableModule(String moduleName) throws UndisableableModuleException, NoModuleException {
-        Preconditions.checkArgument(currentPhase == ConstructionPhase.DISCOVERED);
+        if (currentPhase == ConstructionPhase.DISCOVERED) {
 
-        ModuleSpec ms = discoveredModules.get(moduleName.toLowerCase());
-        if (ms == null) {
-            // No module
-            throw new NoModuleException(moduleName);
+            ModuleSpec ms = discoveredModules.get(moduleName.toLowerCase());
+            if (ms == null) {
+                // No module
+                throw new NoModuleException(moduleName);
+            }
+
+            if (ms.isMandatory() || ms.getStatus() == LoadingStatus.FORCELOAD) {
+                throw new UndisableableModuleException(moduleName);
+            }
+
+            ms.setStatus(LoadingStatus.DISABLED);
+        } else {
+            Preconditions.checkState(currentPhase == ConstructionPhase.ENABLED);
+            ModuleSpec ms = discoveredModules.get(moduleName.toLowerCase());
+            Module.RuntimeDisableable m = enabledDisableableModules.get(moduleName.toLowerCase());
+            if (!ms.isRuntimeAlterable()) {
+                throw new UndisableableModuleException(moduleName.toLowerCase(), "Cannot disable this module at runtime!");
+            }
+
+            Preconditions.checkState(ms.getPhase() == ModulePhase.ENABLED, "Cannot disable this module as it is not enabled!");
+            Preconditions.checkState(ms.getPhase() != ModulePhase.ERRORED, "Cannot disable this module as it errored!");
+
+            m.onDisable();
+            detachConfig(ms.getName());
+            ms.setPhase(ModulePhase.DISABLED);
+            enabledDisableableModules.remove(moduleName.toLowerCase());
         }
-
-        if (ms.isMandatory() || ms.getStatus() == LoadingStatus.FORCELOAD) {
-            throw new UndisableableModuleException(moduleName);
-        }
-
-        ms.setStatus(LoadingStatus.DISABLED);
     }
 
     protected abstract Module getModule(ModuleSpec spec) throws Exception;
@@ -323,7 +345,7 @@ public abstract class ModuleContainer {
         Set<String> disabledModules = getModules(ModuleStatusTristate.DISABLE);
         while (!disabledModules.isEmpty()) {
             // Find any modules that have dependencies on disabled modules, and disable them.
-            List<ModuleSpec> toDisable = getModules(ModuleStatusTristate.ENABLE).stream().map(discoveredModules::get).filter(x -> !Collections.disjoint(disabledModules, x.getDeps())).collect(Collectors.toList());
+            List<ModuleSpec> toDisable = getModules(ModuleStatusTristate.ENABLE).stream().map(discoveredModules::get).filter(x -> !Collections.disjoint(disabledModules, x.getDependencies())).collect(Collectors.toList());
             if (toDisable.isEmpty()) {
                 break;
             }
@@ -372,15 +394,12 @@ public abstract class ModuleContainer {
         // Enter Config Adapter phase - attaching before enabling so that enable methods can get any associated configurations.
         for (String s : modules.keySet()) {
             Module m = modules.get(s);
-            Optional<AbstractConfigAdapter<?>> a = m.getConfigAdapter();
-            if (a.isPresent()) {
-                try {
-                    config.attachConfigAdapter(s, a.get());
-                } catch (IOException e) {
-                    e.printStackTrace();
-                    if (failOnOneError) {
-                        throw new QuickStartModuleLoaderException.Enabling(m.getClass(), "Failed to attach config.", e);
-                    }
+            try {
+                attachConfig(s, m);
+            } catch (Exception e) {
+                e.printStackTrace();
+                if (failOnOneError) {
+                    throw new QuickStartModuleLoaderException.Enabling(m.getClass(), "Failed to attach config.", e);
                 }
             }
         }
@@ -401,7 +420,7 @@ public abstract class ModuleContainer {
 
                 try {
                     Module m = modules.get(s);
-                    v.onModuleAction(enabler, m, ms);
+                    v.onModuleAction(this, enabler, m, ms);
                 } catch (Exception construction) {
                     construction.printStackTrace();
                     modules.remove(s);
@@ -433,6 +452,54 @@ public abstract class ModuleContainer {
         }
 
         currentPhase = ConstructionPhase.ENABLED;
+    }
+
+    /**
+     * Enables a {@link Module.RuntimeDisableable} after the construction has completed.
+     *
+     * @param name The name of the module to load.
+     * @throws Exception thrown if the module is not loadable for any reason, including if it is already enabled.
+     */
+    public void runtimeEnable(String name) throws Exception {
+        Preconditions.checkState(this.currentPhase == ConstructionPhase.ENABLED);
+        Preconditions.checkState(!isModuleLoaded(name), "Module is already loaded!");
+        ModuleSpec ms = discoveredModules.get(name);
+        Preconditions.checkState(Module.RuntimeDisableable.class.isAssignableFrom(ms.getModuleClass()),
+                "Module " + name + " cannot be enabled at runtime!");
+
+        try {
+            // Construction
+            Module.RuntimeDisableable module = (Module.RuntimeDisableable)getModule(ms);
+            ms.setPhase(ModulePhase.CONSTRUCTED);
+
+            // Enabling
+            for (EnablePhase v : EnablePhase.values()) {
+                try {
+                    v.onModuleAction(this, enabler, module, ms);
+                } catch (Exception e) {
+                    if (v == EnablePhase.POSTENABLE) {
+                        loggerProxy.error("The module " + ms.getModuleClass().getName() + " failed to post-enable.");
+                    } else {
+                        throw e;
+                    }
+                }
+            }
+        } catch (Exception construction) {
+            ms.setPhase(ModulePhase.ERRORED);
+            throw construction;
+        }
+
+    }
+
+    private void attachConfig(String name, Module m) throws Exception {
+        Optional<AbstractConfigAdapter<?>> a = m.getConfigAdapter();
+        if (a.isPresent()) {
+            config.attachConfigAdapter(name, a.get());
+        }
+    }
+
+    private void detachConfig(String name) {
+        config.detachConfigAdapter(name);
     }
 
     @SuppressWarnings("unchecked")
@@ -613,7 +680,7 @@ public abstract class ModuleContainer {
 
         void onStart(ModuleContainer container);
 
-        void onModuleAction(ModuleEnabler enabler, Module module, ModuleSpec ms) throws Exception;
+        void onModuleAction(ModuleContainer moduleContainer, ModuleEnabler enabler, Module module, ModuleSpec ms) throws Exception;
     }
 
     private enum EnablePhase implements ConstructPhase {
@@ -624,7 +691,7 @@ public abstract class ModuleContainer {
             }
 
             @Override
-            public void onModuleAction(ModuleEnabler enabler, Module module, ModuleSpec ms) throws Exception {
+            public void onModuleAction(ModuleContainer moduleContainer, ModuleEnabler enabler, Module module, ModuleSpec ms) throws Exception {
                 enabler.preEnableModule(module);
             }
         },
@@ -635,9 +702,12 @@ public abstract class ModuleContainer {
             }
 
             @Override
-            public void onModuleAction(ModuleEnabler enabler, Module module, ModuleSpec ms) throws Exception {
+            public void onModuleAction(ModuleContainer moduleContainer, ModuleEnabler enabler, Module module, ModuleSpec ms) throws Exception {
                 enabler.enableModule(module);
                 ms.setPhase(ModulePhase.ENABLED);
+                if (module instanceof Module.RuntimeDisableable) {
+                    moduleContainer.enabledDisableableModules.put(ms.getId(), (Module.RuntimeDisableable)module);
+                }
             }
         },
         POSTENABLE {
@@ -647,7 +717,7 @@ public abstract class ModuleContainer {
             }
 
             @Override
-            public void onModuleAction(ModuleEnabler enabler, Module module, ModuleSpec ms) throws Exception {
+            public void onModuleAction(ModuleContainer moduleContainer, ModuleEnabler enabler, Module module, ModuleSpec ms) throws Exception {
                 enabler.postEnableModule(module);
             }
         }

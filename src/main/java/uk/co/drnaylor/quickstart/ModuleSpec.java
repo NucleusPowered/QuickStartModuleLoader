@@ -23,6 +23,7 @@ public final class ModuleSpec {
     private final List<String> deps;
     private final String name;
     private final String id;
+    private final boolean runtimeDisableable;
     private LoadingStatus status;
     private final boolean isMandatory;
     private ModulePhase phase = ModulePhase.DISCOVERED;
@@ -45,6 +46,7 @@ public final class ModuleSpec {
 
         this.id = id;
         this.moduleClass = moduleClass;
+        this.runtimeDisableable = Module.RuntimeDisableable.class.isAssignableFrom(moduleClass);
         this.name = name;
         this.status = isMandatory ? LoadingStatus.FORCELOAD : status;
         this.isMandatory = isMandatory;
@@ -124,16 +126,33 @@ public final class ModuleSpec {
      * @param phase The {@link ModulePhase}
      */
     void setPhase(ModulePhase phase) {
-        Preconditions.checkState(this.phase != ModulePhase.ENABLED && this.phase != ModulePhase.DISABLED && this.phase != ModulePhase.ERRORED,
-                "The module with ID " + id + " is already in the state " + this.phase.name() + " and cannot be set to the phase " + phase.name());
         this.phase = phase;
     }
 
-    public List<String> getSoftDeps() {
+    /**
+     * Gets modules that should load before this one, if they are to be enabled.
+     *
+     * @return The list of the dependencies' IDs.
+     */
+    public List<String> getSoftDependencies() {
         return softDeps;
     }
 
-    public List<String> getDeps() {
+    /**
+     * Gets modules that <strong>must</strong> be loaded before this one.
+     *
+     * @return The list of the dependencies' IDs.
+     */
+    public List<String> getDependencies() {
         return deps;
+    }
+
+    /**
+     * Returns whether this module can be enabled/disabled at runtime.
+     *
+     * @return <code>true</code> if so.
+     */
+    public boolean isRuntimeAlterable() {
+        return runtimeDisableable;
     }
 }

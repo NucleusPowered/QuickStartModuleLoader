@@ -37,4 +37,15 @@ public interface Module {
      * Runs after the enable phase.
      */
     default void postEnable() {}
+
+    /**
+     * Marks a module as disableable at runtime.
+     */
+    interface RuntimeDisableable extends Module {
+
+        /**
+         * Runs when a module is disabled.
+         */
+        void onDisable();
+    }
 }

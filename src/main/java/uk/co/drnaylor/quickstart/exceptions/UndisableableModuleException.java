@@ -11,7 +11,11 @@ public class UndisableableModuleException extends Exception {
     private final String module;
 
     public UndisableableModuleException(String module) {
-        super(MessageFormat.format("Cannot disable the module \"{0}\"", module));
+        this(module, MessageFormat.format("Cannot disable the module \"{0}\"", module));
+    }
+
+    public UndisableableModuleException(String module, String message) {
+        super(message);
         this.module = module;
     }
 

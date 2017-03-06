@@ -31,6 +31,7 @@ public class ModuleConfigurationAdapterTests extends FakeLoaderTests {
 
     @Before
     @Override
+    @SuppressWarnings("unchecked")
     public void beforeTests() throws Exception {
         super.beforeTests();
 

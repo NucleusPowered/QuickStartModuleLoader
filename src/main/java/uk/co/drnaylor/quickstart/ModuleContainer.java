@@ -662,6 +662,22 @@ public abstract class ModuleContainer {
         }
 
         public abstract R build() throws Exception;
+
+        /**
+         * Builds the module container and immediately starts discovery.
+         *
+         * @param startDiscover <code>true</code> if so.
+         * @return The built module container.
+         * @throws Exception if there was a problem during building or discovery.
+         */
+        public final R build(boolean startDiscover) throws Exception {
+            R build = build();
+            if (startDiscover) {
+                build.startDiscover();
+            }
+
+            return build;
+        }
     }
 
     public enum ModuleStatusTristate {

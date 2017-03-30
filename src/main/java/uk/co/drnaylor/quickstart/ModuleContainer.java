@@ -11,8 +11,11 @@ import ninja.leaping.configurate.ConfigurationNode;
 import ninja.leaping.configurate.ConfigurationOptions;
 import ninja.leaping.configurate.loader.ConfigurationLoader;
 import ninja.leaping.configurate.objectmapping.ObjectMappingException;
+import ninja.leaping.configurate.objectmapping.serialize.ConfigSerializable;
 import uk.co.drnaylor.quickstart.annotations.ModuleData;
 import uk.co.drnaylor.quickstart.config.AbstractConfigAdapter;
+import uk.co.drnaylor.quickstart.config.NoMergeIfPresent;
+import uk.co.drnaylor.quickstart.config.TypedAbstractConfigAdapter;
 import uk.co.drnaylor.quickstart.enums.ConstructionPhase;
 import uk.co.drnaylor.quickstart.enums.LoadingStatus;
 import uk.co.drnaylor.quickstart.enums.ModulePhase;
@@ -97,6 +100,11 @@ public abstract class ModuleContainer {
     private final boolean requireAnnotation;
 
     /**
+     * Whether or not to take note of {@link NoMergeIfPresent} annotations on configs.
+     */
+    private final boolean processDoNotMerge;
+
+    /**
      * Constructs a {@link ModuleContainer} and starts discovery of the modules.
      *
      * @param <N>                 The type of {@link ConfigurationNode} to use.
@@ -108,6 +116,7 @@ public abstract class ModuleContainer {
      * @param onPostEnable        The {@link Procedure} to run on post enable, before modules are pre-enabled.
      * @param configOptions       The {@link Function} that converts {@link ConfigurationOptions}.
      * @param requireAnnotation   Whether modules must have the {@link ModuleData} annotation.
+     * @param processDoNotMerge   Whether module configs will have {@link NoMergeIfPresent} annotations processed.
      *
      * @throws QuickStartModuleDiscoveryException if there is an error starting the Module Container.
      */
@@ -118,7 +127,8 @@ public abstract class ModuleContainer {
                                                             Procedure onEnable,
                                                             Procedure onPostEnable,
                                                             Function<ConfigurationOptions, ConfigurationOptions> configOptions,
-                                                            boolean requireAnnotation) throws QuickStartModuleDiscoveryException {
+                                                            boolean requireAnnotation,
+                                                            boolean processDoNotMerge) throws QuickStartModuleDiscoveryException {
 
         try {
             this.config = new SystemConfig<>(configurationLoader, loggerProxy, configOptions);
@@ -128,6 +138,7 @@ public abstract class ModuleContainer {
             this.onPostEnable = onPostEnable;
             this.onEnable = onEnable;
             this.requireAnnotation = requireAnnotation;
+            this.processDoNotMerge = processDoNotMerge;
         } catch (Exception e) {
             throw new QuickStartModuleDiscoveryException("Unable to start QuickStart", e);
         }
@@ -164,7 +175,7 @@ public abstract class ModuleContainer {
 
             // Attaches config adapter and loads in the defaults.
             config.attachModulesConfig(m);
-            config.saveAdapterDefaults();
+            config.saveAdapterDefaults(false);
 
             // Load what we have in config into our discovered modules.
             try {
@@ -312,8 +323,8 @@ public abstract class ModuleContainer {
                 throw new UndisableableModuleException(moduleName.toLowerCase(), "Cannot disable this module at runtime!");
             }
 
-            Preconditions.checkState(ms.getPhase() == ModulePhase.ENABLED, "Cannot disable this module as it is not enabled!");
             Preconditions.checkState(ms.getPhase() != ModulePhase.ERRORED, "Cannot disable this module as it errored!");
+            Preconditions.checkState(ms.getPhase() == ModulePhase.ENABLED, "Cannot disable this module as it is not enabled!");
 
             m.onDisable();
             detachConfig(ms.getName());
@@ -446,7 +457,7 @@ public abstract class ModuleContainer {
         }
 
         try {
-            config.saveAdapterDefaults();
+            config.saveAdapterDefaults(this.processDoNotMerge);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -547,6 +558,7 @@ public abstract class ModuleContainer {
         protected Procedure onPostEnable = () -> {};
         protected Function<ConfigurationOptions, ConfigurationOptions> configurationOptionsTransformer = x -> x;
         protected ModuleEnabler enabler = ModuleEnabler.SIMPLE_INSTANCE;
+        protected boolean doNotMerge = false;
 
         protected abstract T getThis();
 
@@ -644,6 +656,18 @@ public abstract class ModuleContainer {
          */
         public T setRequireModuleDataAnnotation(boolean requireAnnotation) {
             this.requireAnnotation = requireAnnotation;
+            return getThis();
+        }
+
+        /**
+         * Sets whether {@link TypedAbstractConfigAdapter} {@link ConfigSerializable} fields that have the annotation {@link NoMergeIfPresent}
+         * will <em>not</em> be merged into existing config values.
+         *
+         * @param noMergeIfPresent <code>true</code> if fields should be skipped if they are already populated.
+         * @return This {@link Builder}, for chaining.
+         */
+        public T setNoMergeIfPresent(boolean noMergeIfPresent) {
+            this.doNotMerge = noMergeIfPresent;
             return getThis();
         }
 

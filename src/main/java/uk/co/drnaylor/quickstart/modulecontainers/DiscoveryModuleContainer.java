@@ -17,6 +17,7 @@ import uk.co.drnaylor.quickstart.ModuleContainer;
 import uk.co.drnaylor.quickstart.ModuleSpec;
 import uk.co.drnaylor.quickstart.Procedure;
 import uk.co.drnaylor.quickstart.annotations.ModuleData;
+import uk.co.drnaylor.quickstart.config.NoMergeIfPresent;
 import uk.co.drnaylor.quickstart.exceptions.QuickStartModuleDiscoveryException;
 import uk.co.drnaylor.quickstart.loaders.ModuleConstructor;
 import uk.co.drnaylor.quickstart.loaders.ModuleEnabler;
@@ -71,6 +72,7 @@ public final class DiscoveryModuleContainer extends ModuleContainer {
      * @param onPostEnable        The {@link Procedure} to run on post enable, before modules are pre-enabled.
      * @param function            The {@link Function} that transforms the {@link ConfigurationOptions}.
      * @param requiresAnnotation   Whether modules require a {@link ModuleData} annotation.
+     * @param processDoNotMerge   Whether module configs will have {@link NoMergeIfPresent} annotations processed.
      *
      * @throws QuickStartModuleDiscoveryException if there is an error starting the Module Container.
      */
@@ -85,8 +87,9 @@ public final class DiscoveryModuleContainer extends ModuleContainer {
             Procedure onEnable,
             Procedure onPostEnable,
             Function<ConfigurationOptions, ConfigurationOptions> function,
-            boolean requiresAnnotation) throws QuickStartModuleDiscoveryException {
-        super(configurationLoader, loggerProxy, enabler, onPreEnable, onEnable, onPostEnable, function, requiresAnnotation);
+            boolean requiresAnnotation,
+            boolean processDoNotMerge) throws QuickStartModuleDiscoveryException {
+        super(configurationLoader, loggerProxy, enabler, onPreEnable, onEnable, onPostEnable, function, requiresAnnotation, processDoNotMerge);
         this.classLoader = loader;
         this.constructor = constructor;
         this.packageLocation = packageBase;
@@ -188,7 +191,7 @@ public final class DiscoveryModuleContainer extends ModuleContainer {
 
             checkBuild();
             return new DiscoveryModuleContainer(configurationLoader, classLoader, packageToScan, constructor, enabler, loggerProxy,
-                    onPreEnable, onEnable, onPostEnable, configurationOptionsTransformer, requireAnnotation);
+                    onPreEnable, onEnable, onPostEnable, configurationOptionsTransformer, requireAnnotation, doNotMerge);
         }
     }
 }

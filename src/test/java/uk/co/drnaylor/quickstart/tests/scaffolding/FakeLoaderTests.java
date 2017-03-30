@@ -4,6 +4,10 @@
  */
 package uk.co.drnaylor.quickstart.tests.scaffolding;
 
+import static org.mockito.Matchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
 import ninja.leaping.configurate.ConfigurationNode;
 import ninja.leaping.configurate.ConfigurationOptions;
 import ninja.leaping.configurate.SimpleConfigurationNode;
@@ -17,10 +21,6 @@ import uk.co.drnaylor.quickstart.modulecontainers.ProvidedModuleContainer;
 
 import java.util.Arrays;
 import java.util.stream.Collectors;
-
-import static org.mockito.Matchers.any;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 public class FakeLoaderTests {
 
@@ -45,7 +45,8 @@ public class FakeLoaderTests {
     }
 
     protected ModuleContainer getProvidedContainer(Module... modules) throws Exception {
-        ModuleContainer container = ProvidedModuleContainer.builder().setConfigurationLoader(loader).setModules(Arrays.stream(modules).collect(Collectors.toSet())).build();
+        ModuleContainer container = ProvidedModuleContainer.builder().setConfigurationLoader(loader)
+                .setNoMergeIfPresent(true).setModules(Arrays.stream(modules).collect(Collectors.toSet())).build();
         container.startDiscover();
         return container;
     }

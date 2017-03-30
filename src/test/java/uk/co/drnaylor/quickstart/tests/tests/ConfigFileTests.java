@@ -4,6 +4,8 @@
  */
 package uk.co.drnaylor.quickstart.tests.tests;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
+
 import com.google.common.reflect.TypeToken;
 import ninja.leaping.configurate.ConfigurationNode;
 import ninja.leaping.configurate.ConfigurationOptions;
@@ -19,6 +21,7 @@ import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import uk.co.drnaylor.quickstart.config.AbstractAdaptableConfig;
 import uk.co.drnaylor.quickstart.tests.config.SimpleConfig;
+import uk.co.drnaylor.quickstart.tests.scaffolding.FakeLoaderTests;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
@@ -27,14 +30,10 @@ import java.net.URL;
 import java.nio.file.Path;
 import java.util.function.Function;
 
-import static java.nio.charset.StandardCharsets.UTF_8;
-
-public class ConfigFileTests {
+public class ConfigFileTests extends FakeLoaderTests {
 
     @Rule
     public TemporaryFolder folder = new TemporaryFolder();
-
-    private ConfigurationLoader<ConfigurationNode> loader;
 
     /**
      * Test that changing the ConfigurationOptions via the function argument between loads works.

@@ -6,6 +6,7 @@ package uk.co.drnaylor.quickstart.config;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import ninja.leaping.configurate.ConfigurationNode;
 import ninja.leaping.configurate.ConfigurationOptions;
@@ -13,13 +14,17 @@ import ninja.leaping.configurate.commented.CommentedConfigurationNode;
 import ninja.leaping.configurate.commented.SimpleCommentedConfigurationNode;
 import ninja.leaping.configurate.loader.ConfigurationLoader;
 import ninja.leaping.configurate.objectmapping.ObjectMappingException;
+import ninja.leaping.configurate.objectmapping.Setting;
+import ninja.leaping.configurate.objectmapping.serialize.ConfigSerializable;
 import ninja.leaping.configurate.transformation.ConfigurationTransformation;
 import uk.co.drnaylor.quickstart.exceptions.IncorrectAdapterTypeException;
 import uk.co.drnaylor.quickstart.exceptions.NoModuleException;
 
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.util.List;
 import java.util.Map;
+import java.util.Stack;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -166,17 +171,42 @@ public class AbstractAdaptableConfig<N extends ConfigurationNode, T extends Conf
     /**
      * Saves default values from the adapter to the config file.
      *
+     * @param processNoMergeIfPresent If <code>true</code>, {@link NoMergeIfPresent} annotations will be honoured.
+     *
      * @throws IOException Thrown if the configuration could not be saved.
      */
-    public void saveAdapterDefaults() throws IOException {
+    public void saveAdapterDefaults(boolean processNoMergeIfPresent) throws IOException {
         CommentedConfigurationNode n = SimpleCommentedConfigurationNode.root();
+
+        Stack<String> moduleStack = new Stack<>();
+        List<Object[]> doNotMerge = Lists.newArrayList();
         moduleConfigAdapters.forEach((k, v) -> {
+
             // Configurate does something I wasn't expecting. If we set a single value with a key on a node, it seems
             // to be set as the root - which causes havoc! So, we get the parent if it exists, because that's the
             // actual null node we're interested in.
             ConfigurationNode cn = v.getDefaults();
             if (cn.getParent() != null) {
                 cn = cn.getParent();
+            }
+
+            if (processNoMergeIfPresent) {
+                if (v instanceof TypedAbstractConfigAdapter) {
+                    Object o = ((TypedAbstractConfigAdapter) v).getDefaultObject();
+                    getDoNotMerge(moduleStack, o.getClass(), doNotMerge);
+                }
+
+                if (!doNotMerge.isEmpty()) {
+                    for (Object[] keys : doNotMerge) {
+                        ConfigurationNode toCheck = node.getNode(k).getNode((Object[])keys);
+                        if (!toCheck.isVirtual() && toCheck.getValue() != null) {
+                            cn.getNode((Object[])keys).setValue(null);
+                            cn.getNode((Object[])keys).getParent().removeChild(keys[keys.length - 1]);
+                        }
+                    }
+
+                    doNotMerge.clear();
+                }
             }
 
             n.getNode(k.toLowerCase()).setValue(cn);
@@ -200,5 +230,26 @@ public class AbstractAdaptableConfig<N extends ConfigurationNode, T extends Conf
         });
 
         save();
+    }
+
+    private void getDoNotMerge(Stack<String> keySoFar, Class<?> configSerialisable, List<Object[]> doNotMergeList) {
+        for (Field field : configSerialisable.getDeclaredFields()) {
+            field.setAccessible(true);
+            if (field.isAnnotationPresent(Setting.class)) {
+                String value = field.getAnnotation(Setting.class).value();
+                if (value.equals("")) {
+                    value = field.getName();
+                }
+
+                keySoFar.push(value);
+                if (field.isAnnotationPresent(NoMergeIfPresent.class)) {
+                    doNotMergeList.add(keySoFar.toArray(new String[keySoFar.size()]));
+                } else if (field.getType().isAnnotationPresent(ConfigSerializable.class)) {
+                    getDoNotMerge(keySoFar, field.getType(), doNotMergeList);
+                }
+
+                keySoFar.pop();
+            }
+        }
     }
 }

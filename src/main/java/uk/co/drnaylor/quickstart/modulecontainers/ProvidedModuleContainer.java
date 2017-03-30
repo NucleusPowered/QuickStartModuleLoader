@@ -14,6 +14,7 @@ import uk.co.drnaylor.quickstart.ModuleContainer;
 import uk.co.drnaylor.quickstart.ModuleSpec;
 import uk.co.drnaylor.quickstart.Procedure;
 import uk.co.drnaylor.quickstart.annotations.ModuleData;
+import uk.co.drnaylor.quickstart.config.NoMergeIfPresent;
 import uk.co.drnaylor.quickstart.exceptions.NoModuleException;
 import uk.co.drnaylor.quickstart.exceptions.QuickStartModuleDiscoveryException;
 import uk.co.drnaylor.quickstart.loaders.ModuleEnabler;
@@ -43,6 +44,7 @@ public final class ProvidedModuleContainer extends ModuleContainer {
      * @param modules             The {@link Module}s to load.
      * @param function            The {@link Function} that converts {@link ConfigurationOptions}.
      * @param requireAnnotation   Whether modules require a {@link ModuleData} annotation.
+     * @param processDoNotMerge   Whether module configs will have {@link NoMergeIfPresent} annotations processed.
      *
      * @throws QuickStartModuleDiscoveryException if there is an error starting the Module Container.
      */
@@ -54,8 +56,9 @@ public final class ProvidedModuleContainer extends ModuleContainer {
                                                                   Procedure onPostEnable,
                                                                   Set<Module> modules,
                                                                   Function<ConfigurationOptions, ConfigurationOptions> function,
-                                                                  boolean requireAnnotation) throws QuickStartModuleDiscoveryException {
-        super(configurationLoader, loggerProxy, moduleEnabler, onPreEnable, onEnable, onPostEnable, function, requireAnnotation);
+                                                                  boolean requireAnnotation,
+                                                                  boolean processDoNotMerge) throws QuickStartModuleDiscoveryException {
+        super(configurationLoader, loggerProxy, moduleEnabler, onPreEnable, onEnable, onPostEnable, function, requireAnnotation, processDoNotMerge);
         moduleMap = modules.stream().collect(Collectors.toMap(Module::getClass, v -> v));
     }
 
@@ -111,7 +114,7 @@ public final class ProvidedModuleContainer extends ModuleContainer {
             checkBuild();
 
             return new ProvidedModuleContainer(configurationLoader, loggerProxy, enabler, onPreEnable, onEnable, onPostEnable,
-                    modules, configurationOptionsTransformer, requireAnnotation);
+                    modules, configurationOptionsTransformer, requireAnnotation, doNotMerge);
         }
     }
 }

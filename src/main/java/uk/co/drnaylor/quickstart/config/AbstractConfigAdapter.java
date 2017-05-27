@@ -11,6 +11,7 @@ import ninja.leaping.configurate.ConfigurationOptions;
 import ninja.leaping.configurate.commented.CommentedConfigurationNode;
 import ninja.leaping.configurate.objectmapping.ObjectMappingException;
 import ninja.leaping.configurate.transformation.TransformAction;
+import uk.co.drnaylor.quickstart.annotations.DoNotSave;
 
 import java.util.List;
 import java.util.Optional;
@@ -163,7 +164,16 @@ public abstract class AbstractConfigAdapter<R> {
      * @throws ObjectMappingException if the object could not be created and/or saved.
      */
     final void refreshConfigurationNode() throws ObjectMappingException {
-        setNode(getNode());
+        if (this.getClass().isAnnotationPresent(DoNotSave.class)) {
+            if (this.header != null) {
+                ConfigurationNode cn = nodeGetter.get();
+                if (cn instanceof CommentedConfigurationNode) {
+                    nodeSaver.accept(((CommentedConfigurationNode) cn).setComment(this.header));
+                }
+            }
+        } else {
+            setNode(getNode());
+        }
     }
 
     /**

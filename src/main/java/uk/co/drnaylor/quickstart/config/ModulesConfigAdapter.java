@@ -45,22 +45,18 @@ public final class ModulesConfigAdapter extends AbstractConfigAdapter<HashMap<St
     }
 
     @Override
-    @SuppressWarnings("unchecked")
     protected ConfigurationNode generateDefaults(ConfigurationNode node) {
-        try {
-            ConfigurationNode toReturn = node.setValue(tt, defaults);
-            if (toReturn instanceof CommentedConfigurationNode) {
-                this.descriptions.forEach((k, v) -> {
-                    if (v != null && !v.isEmpty()) {
-                        ((CommentedConfigurationNode) toReturn).getNode(k).setComment(v);
-                    }
-                });
+        this.defaults.forEach((k, v) -> {
+            node.getNode(k).setValue(v.name());
+            if (node instanceof CommentedConfigurationNode) {
+                String comment = this.descriptions.get(k.toLowerCase());
+                if (comment != null && !comment.isEmpty()) {
+                    ((CommentedConfigurationNode) node).getNode(k).setComment(comment);
+                }
             }
+        });
 
-            return toReturn;
-        } catch (ObjectMappingException e) {
-            return node;
-        }
+        return node;
     }
 
     @Override

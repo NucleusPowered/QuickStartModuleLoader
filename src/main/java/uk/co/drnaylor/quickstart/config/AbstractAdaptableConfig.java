@@ -17,6 +17,7 @@ import ninja.leaping.configurate.objectmapping.ObjectMappingException;
 import ninja.leaping.configurate.objectmapping.Setting;
 import ninja.leaping.configurate.objectmapping.serialize.ConfigSerializable;
 import ninja.leaping.configurate.transformation.ConfigurationTransformation;
+import uk.co.drnaylor.quickstart.annotations.DoNotSave;
 import uk.co.drnaylor.quickstart.exceptions.IncorrectAdapterTypeException;
 import uk.co.drnaylor.quickstart.exceptions.NoModuleException;
 
@@ -150,10 +151,12 @@ public class AbstractAdaptableConfig<N extends ConfigurationNode, T extends Conf
      */
     public final void refreshConfigurationNode() {
         moduleConfigAdapters.values().forEach(x -> {
-            try {
-                x.refreshConfigurationNode();
-            } catch (ObjectMappingException e) {
-                e.printStackTrace();
+            if (!x.getClass().isAnnotationPresent(DoNotSave.class)) {
+                try {
+                    x.refreshConfigurationNode();
+                } catch (ObjectMappingException e) {
+                    e.printStackTrace();
+                }
             }
         });
     }

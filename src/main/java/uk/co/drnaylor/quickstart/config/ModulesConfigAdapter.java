@@ -10,6 +10,7 @@ import ninja.leaping.configurate.ConfigurationNode;
 import ninja.leaping.configurate.commented.CommentedConfigurationNode;
 import ninja.leaping.configurate.objectmapping.ObjectMappingException;
 import uk.co.drnaylor.quickstart.LoggerProxy;
+import uk.co.drnaylor.quickstart.annotations.DoNotSave;
 import uk.co.drnaylor.quickstart.enums.LoadingStatus;
 
 import java.util.HashMap;
@@ -20,6 +21,7 @@ import javax.annotation.Nullable;
 /**
  * Configuration adapter that handles the module statuses.
  */
+@DoNotSave
 public final class ModulesConfigAdapter extends AbstractConfigAdapter<HashMap<String, LoadingStatus>> {
 
     public static final String modulesKey = "modules";

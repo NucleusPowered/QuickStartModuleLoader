@@ -24,6 +24,8 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import javax.annotation.Nullable;
+
 public final class ProvidedModuleContainer extends ModuleContainer {
 
     public static Builder builder() {
@@ -57,8 +59,12 @@ public final class ProvidedModuleContainer extends ModuleContainer {
                                                                   Set<Module> modules,
                                                                   Function<ConfigurationOptions, ConfigurationOptions> function,
                                                                   boolean requireAnnotation,
-                                                                  boolean processDoNotMerge) throws QuickStartModuleDiscoveryException {
-        super(configurationLoader, loggerProxy, moduleEnabler, onPreEnable, onEnable, onPostEnable, function, requireAnnotation, processDoNotMerge);
+                                                                  boolean processDoNotMerge,
+                                                                  @Nullable Function<Module, String> headerProcessor,
+                                                                  @Nullable Function<Class<? extends Module>, String> descriptionProcessor)
+            throws QuickStartModuleDiscoveryException {
+        super(configurationLoader, loggerProxy, moduleEnabler, onPreEnable, onEnable, onPostEnable, function, requireAnnotation, processDoNotMerge,
+                headerProcessor, descriptionProcessor);
         moduleMap = modules.stream().collect(Collectors.toMap(Module::getClass, v -> v));
     }
 
@@ -114,7 +120,7 @@ public final class ProvidedModuleContainer extends ModuleContainer {
             checkBuild();
 
             return new ProvidedModuleContainer(configurationLoader, loggerProxy, enabler, onPreEnable, onEnable, onPostEnable,
-                    modules, configurationOptionsTransformer, requireAnnotation, doNotMerge);
+                    modules, configurationOptionsTransformer, requireAnnotation, doNotMerge, moduleConfigurationHeader, moduleDescriptionHandler);
         }
     }
 }

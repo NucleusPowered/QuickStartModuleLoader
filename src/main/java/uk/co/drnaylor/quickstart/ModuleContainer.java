@@ -38,6 +38,8 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
+import javax.annotation.Nullable;
+
 /**
  * The ModuleContainer contains all modules for a particular modular system. It scans the provided {@link ClassLoader}
  * classpath for {@link Module}s which has a root in the provided package. It handles all the discovery, module config
@@ -105,18 +107,30 @@ public abstract class ModuleContainer {
     private final boolean processDoNotMerge;
 
     /**
+     * The function that determines configuration headers for an entry.
+     */
+    private final Function<Module, String> headerProcessor;
+
+    /**
+     * The function that determines the descriptions for a module's name.
+     */
+    private final Function<Class<? extends Module>, String> descriptionProcessor;
+
+    /**
      * Constructs a {@link ModuleContainer} and starts discovery of the modules.
      *
-     * @param <N>                 The type of {@link ConfigurationNode} to use.
-     * @param configurationLoader The {@link ConfigurationLoader} that contains details of whether the modules should be enabled or not.
-     * @param moduleEnabler       The {@link ModuleEnabler} that contains the logic to enable modules.
-     * @param loggerProxy         The {@link LoggerProxy} that contains methods to send messages to the logger, or any other source.
-     * @param onPreEnable         The {@link Procedure} to run on pre enable, before modules are pre-enabled.
-     * @param onEnable            The {@link Procedure} to run on enable, before modules are pre-enabled.
-     * @param onPostEnable        The {@link Procedure} to run on post enable, before modules are pre-enabled.
-     * @param configOptions       The {@link Function} that converts {@link ConfigurationOptions}.
-     * @param requireAnnotation   Whether modules must have the {@link ModuleData} annotation.
-     * @param processDoNotMerge   Whether module configs will have {@link NoMergeIfPresent} annotations processed.
+     * @param <N>                  The type of {@link ConfigurationNode} to use.
+     * @param configurationLoader  The {@link ConfigurationLoader} that contains details of whether the modules should be enabled or not.
+     * @param moduleEnabler        The {@link ModuleEnabler} that contains the logic to enable modules.
+     * @param loggerProxy          The {@link LoggerProxy} that contains methods to send messages to the logger, or any other source.
+     * @param onPreEnable          The {@link Procedure} to run on pre enable, before modules are pre-enabled.
+     * @param onEnable             The {@link Procedure} to run on enable, before modules are pre-enabled.
+     * @param onPostEnable         The {@link Procedure} to run on post enable, before modules are pre-enabled.
+     * @param configOptions        The {@link Function} that converts {@link ConfigurationOptions}.
+     * @param requireAnnotation    Whether modules must have the {@link ModuleData} annotation.
+     * @param processDoNotMerge    Whether module configs will have {@link NoMergeIfPresent} annotations processed.
+     * @param headerProcessor      The {@link Function} to use when adding headers to module config sections. {@code null} means no headers.
+     * @param descriptionProcessor The {@link Function} to use when adding descriptions to modules. {@code null} means no descriptions.
      *
      * @throws QuickStartModuleDiscoveryException if there is an error starting the Module Container.
      */
@@ -128,7 +142,10 @@ public abstract class ModuleContainer {
                                                             Procedure onPostEnable,
                                                             Function<ConfigurationOptions, ConfigurationOptions> configOptions,
                                                             boolean requireAnnotation,
-                                                            boolean processDoNotMerge) throws QuickStartModuleDiscoveryException {
+                                                            boolean processDoNotMerge,
+                                                            @Nullable Function<Module, String> headerProcessor,
+                                                            @Nullable Function<Class<? extends Module>, String> descriptionProcessor
+            ) throws QuickStartModuleDiscoveryException {
 
         try {
             this.config = new SystemConfig<>(configurationLoader, loggerProxy, configOptions);
@@ -139,6 +156,8 @@ public abstract class ModuleContainer {
             this.onEnable = onEnable;
             this.requireAnnotation = requireAnnotation;
             this.processDoNotMerge = processDoNotMerge;
+            this.descriptionProcessor = descriptionProcessor == null ? m -> "" : descriptionProcessor;
+            this.headerProcessor = headerProcessor == null ? m -> "" : headerProcessor;
         } catch (Exception e) {
             throw new QuickStartModuleDiscoveryException("Unable to start QuickStart", e);
         }
@@ -170,11 +189,11 @@ public abstract class ModuleContainer {
             resolveDependencyOrder(discovered);
 
             // Modules discovered. Create the Module Config adapter.
-            Map<String, LoadingStatus> m = discoveredModules.entrySet().stream().filter(x -> !x.getValue().isMandatory())
-                    .collect(Collectors.toMap(Map.Entry::getKey, v -> v.getValue().getStatus()));
+            List<ModuleSpec> moduleSpecList = this.discoveredModules.entrySet().stream().filter(x -> !x.getValue().isMandatory())
+                    .map(Map.Entry::getValue).collect(Collectors.toList());
 
             // Attaches config adapter and loads in the defaults.
-            config.attachModulesConfig(m);
+            config.attachModulesConfig(moduleSpecList, this.descriptionProcessor);
             config.saveAdapterDefaults(false);
 
             // Load what we have in config into our discovered modules.
@@ -505,7 +524,7 @@ public abstract class ModuleContainer {
     private void attachConfig(String name, Module m) throws Exception {
         Optional<AbstractConfigAdapter<?>> a = m.getConfigAdapter();
         if (a.isPresent()) {
-            config.attachConfigAdapter(name, a.get());
+            config.attachConfigAdapter(name, a.get(), this.headerProcessor.apply(m));
         }
     }
 
@@ -559,6 +578,8 @@ public abstract class ModuleContainer {
         protected Function<ConfigurationOptions, ConfigurationOptions> configurationOptionsTransformer = x -> x;
         protected ModuleEnabler enabler = ModuleEnabler.SIMPLE_INSTANCE;
         protected boolean doNotMerge = false;
+        @Nullable protected Function<Class<? extends Module>, String> moduleDescriptionHandler = null;
+        @Nullable protected Function<Module, String> moduleConfigurationHeader = null;
 
         protected abstract T getThis();
 
@@ -668,6 +689,36 @@ public abstract class ModuleContainer {
          */
         public T setNoMergeIfPresent(boolean noMergeIfPresent) {
             this.doNotMerge = noMergeIfPresent;
+            return getThis();
+        }
+
+        /**
+         * Sets the function that is used to set the description for each module in the configuration file.
+         *
+         * <p>
+         *     This is displayed above each of the module toggles in the configuration file.
+         * </p>
+         *
+         * @param handler The {@link Function} to use, or {@code null} otherwise.
+         * @return This {@link Builder}, for chaining.
+         */
+        public T setModuleDescriptionHandler(@Nullable Function<Class<? extends Module>, String> handler) {
+            this.moduleDescriptionHandler = handler;
+            return getThis();
+        }
+
+        /**
+         * Sets the function that is used to set the header for each module's configuration block in the configuration file.
+         *
+         * <p>
+         *     This is displayed above each of the configuration sections in the configuration file.
+         * </p>
+         *
+         * @param header The {@link Function} to use, or {@code null} otherwise.
+         * @return This {@link Builder}, for chaining.
+         */
+        public T setModuleConfigurationHeader(@Nullable Function<Module, String> header) {
+            this.moduleConfigurationHeader = header;
             return getThis();
         }
 

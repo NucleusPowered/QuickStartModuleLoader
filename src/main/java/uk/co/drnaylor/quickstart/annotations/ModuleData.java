@@ -6,14 +6,18 @@ package uk.co.drnaylor.quickstart.annotations;
 
 import uk.co.drnaylor.quickstart.enums.LoadingStatus;
 
-import java.lang.annotation.*;
+import java.lang.annotation.Documented;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
 /**
  * This annotation is intended to be used on {@link uk.co.drnaylor.quickstart.Module} files. It specifies the default
  * status of the module using the {@link LoadingStatus} enum, and other metadata.
  *
  * <p>
- *     If a module is discovered without this annotation, then we'll try to make do...
+ *     If a module is discovered without this annotation, then we'll try to make do, if the container is set to do so.
  * </p>
  */
 @Retention(RetentionPolicy.RUNTIME)
@@ -34,6 +38,13 @@ public @interface ModuleData {
      * @return The name of this module.
      */
     String name();
+
+    /**
+     * The description for a module. Set to an empty string to disable.
+     *
+     * @return The description.
+     */
+    String description() default "";
 
     /**
      * Specifies the {@link uk.co.drnaylor.quickstart.Module}s that should be loaded before this one. Modules that are

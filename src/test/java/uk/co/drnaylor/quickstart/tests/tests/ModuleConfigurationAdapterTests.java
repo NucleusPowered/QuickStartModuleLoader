@@ -46,7 +46,8 @@ public class ModuleConfigurationAdapterTests extends FakeLoaderTests {
         m.put("d", LoadingStatus.DISABLED);
         m.put("e", LoadingStatus.ENABLED);
         m.put("f", LoadingStatus.FORCELOAD);
-        config.attachConfigAdapter(ModulesConfigAdapter.modulesKey, new ModulesConfigAdapter(m, DefaultLogger.INSTANCE));
+        HashMap<String, String> r = Maps.newHashMap();
+        config.attachConfigAdapter(ModulesConfigAdapter.modulesKey, new ModulesConfigAdapter(m, r, DefaultLogger.INSTANCE));
     }
 
     @Test

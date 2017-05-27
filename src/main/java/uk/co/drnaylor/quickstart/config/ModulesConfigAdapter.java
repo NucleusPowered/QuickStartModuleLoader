@@ -13,6 +13,7 @@ import uk.co.drnaylor.quickstart.LoggerProxy;
 import uk.co.drnaylor.quickstart.enums.LoadingStatus;
 
 import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Configuration adapter that handles the module statuses.
@@ -21,12 +22,14 @@ public final class ModulesConfigAdapter extends AbstractConfigAdapter<HashMap<St
 
     public static final String modulesKey = "modules";
 
-    private final TypeToken<HashMap<String, LoadingStatus>> tt = new TypeToken<HashMap<String, LoadingStatus>>() {};
-    private final HashMap<String, LoadingStatus> defaults;
+    private final TypeToken<Map<String, LoadingStatus>> tt = new TypeToken<Map<String, LoadingStatus>>() {};
+    private final Map<String, LoadingStatus> defaults;
     private final LoggerProxy proxy;
+    private final Map<String, String> descriptions;
 
-    public ModulesConfigAdapter(HashMap<String, LoadingStatus> defaults, LoggerProxy proxy) {
+    public ModulesConfigAdapter(Map<String, LoadingStatus> defaults, Map<String, String> descriptions, LoggerProxy proxy) {
         this.defaults = defaults;
+        this.descriptions = descriptions;
         this.proxy = proxy;
     }
 
@@ -34,7 +37,16 @@ public final class ModulesConfigAdapter extends AbstractConfigAdapter<HashMap<St
     @SuppressWarnings("unchecked")
     protected ConfigurationNode generateDefaults(ConfigurationNode node) {
         try {
-            return node.setValue(tt, defaults);
+            ConfigurationNode toReturn = node.setValue(tt, defaults);
+            if (toReturn instanceof CommentedConfigurationNode) {
+                this.descriptions.forEach((k, v) -> {
+                    if (v != null && !v.isEmpty()) {
+                        ((CommentedConfigurationNode) toReturn).getNode(k).setComment(v);
+                    }
+                });
+            }
+
+            return toReturn;
         } catch (ObjectMappingException e) {
             return node;
         }

@@ -8,6 +8,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import ninja.leaping.configurate.ConfigurationNode;
 import ninja.leaping.configurate.ConfigurationOptions;
+import ninja.leaping.configurate.commented.CommentedConfigurationNode;
 import ninja.leaping.configurate.objectmapping.ObjectMappingException;
 import ninja.leaping.configurate.transformation.TransformAction;
 
@@ -15,6 +16,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
+
+import javax.annotation.Nullable;
 
 /**
  * This is the base of all configuration adapters that can be attached to {@link AbstractAdaptableConfig} files. It
@@ -47,15 +50,23 @@ public abstract class AbstractConfigAdapter<R> {
     private Supplier<ConfigurationNode> nodeGetter = null;
     private Supplier<ConfigurationNode> nodeCreator = null;
     private Consumer<ConfigurationNode> nodeSaver = null;
-    private String module = null;
+    @Nullable private String module = null;
+    @Nullable private String header = null;
 
-    final void attachConfig(String module, AbstractAdaptableConfig<?, ?> adapter, Supplier<ConfigurationNode> nodeGetter, Consumer<ConfigurationNode> nodeSaver, Supplier<ConfigurationNode> nodeCreator) {
+    final void attachConfig(String module,
+            AbstractAdaptableConfig<?, ?> adapter,
+            Supplier<ConfigurationNode> nodeGetter,
+            Consumer<ConfigurationNode> nodeSaver,
+            Supplier<ConfigurationNode> nodeCreator,
+            @Nullable String header) {
+
         Preconditions.checkState(attachedConfig == null);
         this.module = module;
         this.attachedConfig = adapter;
         this.nodeGetter = nodeGetter;
         this.nodeSaver = nodeSaver;
         this.nodeCreator = nodeCreator;
+        this.header = header;
 
         onAttach(module, adapter);
     }
@@ -69,6 +80,7 @@ public abstract class AbstractConfigAdapter<R> {
         this.nodeGetter = null;
         this.nodeSaver = null;
         this.nodeCreator = null;
+        this.header = null;
     }
 
     /**
@@ -137,7 +149,13 @@ public abstract class AbstractConfigAdapter<R> {
     public final void setNode(R data) throws ObjectMappingException {
         Preconditions.checkState(attachedConfig != null, "You must attach this adapter before using it.");
 
-        nodeSaver.accept(insertIntoConfigurateNode(getNewNode(), data));
+        ConfigurationNode node = insertIntoConfigurateNode(getNewNode(), data);
+        if (this.header != null && node instanceof CommentedConfigurationNode) {
+            CommentedConfigurationNode ccn = (CommentedConfigurationNode) node;
+            ccn.setComment(this.header);
+        }
+
+        nodeSaver.accept(node);
     }
 
     /**

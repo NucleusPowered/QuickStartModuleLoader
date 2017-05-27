@@ -14,9 +14,10 @@ import uk.co.drnaylor.quickstart.config.ModulesConfigAdapter;
 import uk.co.drnaylor.quickstart.enums.LoadingStatus;
 
 import java.io.IOException;
-import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * Defines the configuration file that loads the modules, and any {@link AbstractConfigAdapter}s.
@@ -32,12 +33,15 @@ public final class SystemConfig<N extends ConfigurationNode, T extends Configura
         this.proxy = proxy;
     }
 
-    void attachModulesConfig(Map<String, LoadingStatus> defaults) throws IOException {
+    void attachModulesConfig(List<ModuleSpec> defaults, Function<Class<? extends Module>, String> description) throws IOException {
         Preconditions.checkNotNull(defaults);
         Preconditions.checkState(configAdapter == null);
 
-        HashMap<String, LoadingStatus> h = new HashMap<>(defaults);
-        configAdapter = new ModulesConfigAdapter(h, proxy);
+        Map<String, LoadingStatus> msls = defaults.stream().collect(Collectors.toMap(k -> k.getId().toLowerCase(), ModuleSpec::getStatus));
+        Map<String, String> msdesc = defaults.stream()
+                .collect(Collectors.toMap(k -> k.getId().toLowerCase(), k -> description.apply(k.getModuleClass())));
+
+        configAdapter = new ModulesConfigAdapter(msls, msdesc, proxy);
         this.attachConfigAdapter(modulesNode, configAdapter);
     }
 

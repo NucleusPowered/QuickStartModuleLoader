@@ -27,6 +27,8 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import javax.annotation.Nullable;
+
 public final class DiscoveryModuleContainer extends ModuleContainer {
 
     /**
@@ -88,8 +90,11 @@ public final class DiscoveryModuleContainer extends ModuleContainer {
             Procedure onPostEnable,
             Function<ConfigurationOptions, ConfigurationOptions> function,
             boolean requiresAnnotation,
-            boolean processDoNotMerge) throws QuickStartModuleDiscoveryException {
-        super(configurationLoader, loggerProxy, enabler, onPreEnable, onEnable, onPostEnable, function, requiresAnnotation, processDoNotMerge);
+            boolean processDoNotMerge,
+            @Nullable Function<Module, String> headerProcessor,
+            @Nullable Function<Class<? extends Module>, String> descriptionProcessor) throws QuickStartModuleDiscoveryException {
+        super(configurationLoader, loggerProxy, enabler, onPreEnable, onEnable, onPostEnable, function, requiresAnnotation, processDoNotMerge,
+                headerProcessor, descriptionProcessor);
         this.classLoader = loader;
         this.constructor = constructor;
         this.packageLocation = packageBase;
@@ -191,7 +196,8 @@ public final class DiscoveryModuleContainer extends ModuleContainer {
 
             checkBuild();
             return new DiscoveryModuleContainer(configurationLoader, classLoader, packageToScan, constructor, enabler, loggerProxy,
-                    onPreEnable, onEnable, onPostEnable, configurationOptionsTransformer, requireAnnotation, doNotMerge);
+                    onPreEnable, onEnable, onPostEnable, configurationOptionsTransformer, requireAnnotation, doNotMerge,
+                    moduleConfigurationHeader, moduleDescriptionHandler);
         }
     }
 }

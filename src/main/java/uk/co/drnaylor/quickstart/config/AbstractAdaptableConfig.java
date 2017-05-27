@@ -28,6 +28,8 @@ import java.util.Stack;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
+import javax.annotation.Nullable;
+
 /**
  * A configuration manager that allows for {@link AbstractConfigAdapter} to be attached.
  *
@@ -55,6 +57,11 @@ public class AbstractAdaptableConfig<N extends ConfigurationNode, T extends Conf
         this.nodeCreator = nodeCreator;
         this.optionsTransformer = optionsTransformer;
         load();
+    }
+
+    @SuppressWarnings("unchecked")
+    public final ConfigurationNode createNode() {
+        return this.nodeCreator.get();
     }
 
     /**
@@ -98,17 +105,22 @@ public class AbstractAdaptableConfig<N extends ConfigurationNode, T extends Conf
         throw new IncorrectAdapterTypeException();
     }
 
+    public final void attachConfigAdapter(String module, AbstractConfigAdapter<?> configAdapter) throws IOException {
+        attachConfigAdapter(module, configAdapter, null);
+    }
+
     /**
      * Attaches a {@link AbstractConfigAdapter} to this {@link AbstractAdaptableConfig}.
      *
      * @param module The name of the module that this configuration represents.
-     * @param configAdapter The {@link AbstractConfigAdapter} to attach
+     * @param configAdapter The {@link AbstractConfigAdapter} to attach.
+     * @param header The header for the module.
      * @throws IOException if the configuration defaults could not be saved.
      * @throws IllegalArgumentException if the module has already been attached to.
      * @throws IllegalStateException if the adapter has already been attached.
      */
     @SuppressWarnings("unchecked")
-    public final void attachConfigAdapter(String module, AbstractConfigAdapter<?> configAdapter) throws IOException {
+    public final void attachConfigAdapter(String module, AbstractConfigAdapter<?> configAdapter, @Nullable String header) throws IOException {
         if (moduleConfigAdapters.containsKey(module.toLowerCase())) {
             throw new IllegalArgumentException();
         }
@@ -118,7 +130,8 @@ public class AbstractAdaptableConfig<N extends ConfigurationNode, T extends Conf
                 this,
                 () -> nodeCreator.get().setValue(node.getNode(module.toLowerCase())),
                 n -> node.getNode(module.toLowerCase()).setValue(n),
-                nodeCreator);
+                nodeCreator,
+                header);
         moduleConfigAdapters.put(module.toLowerCase(), configAdapter);
     }
 

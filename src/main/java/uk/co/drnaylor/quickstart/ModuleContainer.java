@@ -156,7 +156,14 @@ public abstract class ModuleContainer {
             this.onEnable = onEnable;
             this.requireAnnotation = requireAnnotation;
             this.processDoNotMerge = processDoNotMerge;
-            this.descriptionProcessor = descriptionProcessor == null ? m -> "" : descriptionProcessor;
+            this.descriptionProcessor = descriptionProcessor == null ? m -> {
+                ModuleData md = m.getAnnotation(ModuleData.class);
+                if (md != null) {
+                    return md.description();
+                }
+
+                return null;
+            } : descriptionProcessor;
             this.headerProcessor = headerProcessor == null ? m -> "" : headerProcessor;
         } catch (Exception e) {
             throw new QuickStartModuleDiscoveryException("Unable to start QuickStart", e);

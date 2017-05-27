@@ -15,6 +15,8 @@ import uk.co.drnaylor.quickstart.enums.LoadingStatus;
 import java.util.HashMap;
 import java.util.Map;
 
+import javax.annotation.Nullable;
+
 /**
  * Configuration adapter that handles the module statuses.
  */
@@ -26,11 +28,20 @@ public final class ModulesConfigAdapter extends AbstractConfigAdapter<HashMap<St
     private final Map<String, LoadingStatus> defaults;
     private final LoggerProxy proxy;
     private final Map<String, String> descriptions;
+    private final String key;
+    private final String header;
 
-    public ModulesConfigAdapter(Map<String, LoadingStatus> defaults, Map<String, String> descriptions, LoggerProxy proxy) {
+    public ModulesConfigAdapter(Map<String, LoadingStatus> defaults, Map<String, String> descriptions, LoggerProxy proxy, String modulesKey,
+            @Nullable String header) {
         this.defaults = defaults;
         this.descriptions = descriptions;
         this.proxy = proxy;
+        this.key = modulesKey;
+        this.header = header;
+    }
+
+    public final String getModulesKey() {
+        return this.key;
     }
 
     @Override
@@ -73,8 +84,9 @@ public final class ModulesConfigAdapter extends AbstractConfigAdapter<HashMap<St
     protected ConfigurationNode insertIntoConfigurateNode(ConfigurationNode cn, HashMap<String, LoadingStatus> data) throws ObjectMappingException {
         cn.setValue(tt, data);
         if (cn instanceof CommentedConfigurationNode) {
-            ((CommentedConfigurationNode) cn).setComment("Available modules to enable or disable. Set each to ENABLED to enable the module, DISABLED"
-                    + " to prevent the module from loading or FORCELOAD to load the module even if something else tries to disable it.");
+            String h = this.header == null ? "Available modules to enable or disable. Set each to ENABLED to enable the module, DISABLED"
+                    + " to prevent the module from loading or FORCELOAD to load the module even if something else tries to disable it." : this.header;
+            ((CommentedConfigurationNode) cn).setComment(h);
         }
 
         return cn;

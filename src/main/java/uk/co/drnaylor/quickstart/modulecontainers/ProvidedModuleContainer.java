@@ -47,6 +47,8 @@ public final class ProvidedModuleContainer extends ModuleContainer {
      * @param function            The {@link Function} that converts {@link ConfigurationOptions}.
      * @param requireAnnotation   Whether modules require a {@link ModuleData} annotation.
      * @param processDoNotMerge   Whether module configs will have {@link NoMergeIfPresent} annotations processed.
+     * @param moduleSection        The name of the section that contains the module enable/disable switches.
+     * @param moduleSectionHeader  The comment header for the "module" section
      *
      * @throws QuickStartModuleDiscoveryException if there is an error starting the Module Container.
      */
@@ -61,10 +63,12 @@ public final class ProvidedModuleContainer extends ModuleContainer {
                                                                   boolean requireAnnotation,
                                                                   boolean processDoNotMerge,
                                                                   @Nullable Function<Module, String> headerProcessor,
-                                                                  @Nullable Function<Class<? extends Module>, String> descriptionProcessor)
+                                                                  @Nullable Function<Class<? extends Module>, String> descriptionProcessor,
+                                                                  String moduleSection,
+                                                                  @Nullable String moduleSectionHeader)
             throws QuickStartModuleDiscoveryException {
         super(configurationLoader, loggerProxy, moduleEnabler, onPreEnable, onEnable, onPostEnable, function, requireAnnotation, processDoNotMerge,
-                headerProcessor, descriptionProcessor);
+                headerProcessor, descriptionProcessor, moduleSection, moduleSectionHeader);
         moduleMap = modules.stream().collect(Collectors.toMap(Module::getClass, v -> v));
     }
 
@@ -120,7 +124,8 @@ public final class ProvidedModuleContainer extends ModuleContainer {
             checkBuild();
 
             return new ProvidedModuleContainer(configurationLoader, loggerProxy, enabler, onPreEnable, onEnable, onPostEnable,
-                    modules, configurationOptionsTransformer, requireAnnotation, doNotMerge, moduleConfigurationHeader, moduleDescriptionHandler);
+                    modules, configurationOptionsTransformer, requireAnnotation, doNotMerge, moduleConfigurationHeader, moduleDescriptionHandler,
+                    moduleConfigSection, moduleDescription);
         }
     }
 }

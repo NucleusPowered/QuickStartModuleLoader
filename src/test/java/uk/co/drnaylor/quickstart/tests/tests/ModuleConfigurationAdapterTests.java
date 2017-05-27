@@ -8,7 +8,6 @@ import com.google.common.collect.Maps;
 import ninja.leaping.configurate.ConfigurationNode;
 import ninja.leaping.configurate.ConfigurationOptions;
 import ninja.leaping.configurate.loader.ConfigurationLoader;
-import ninja.leaping.configurate.objectmapping.ObjectMappingException;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -16,8 +15,6 @@ import uk.co.drnaylor.quickstart.DefaultLogger;
 import uk.co.drnaylor.quickstart.SystemConfig;
 import uk.co.drnaylor.quickstart.config.ModulesConfigAdapter;
 import uk.co.drnaylor.quickstart.enums.LoadingStatus;
-import uk.co.drnaylor.quickstart.exceptions.IncorrectAdapterTypeException;
-import uk.co.drnaylor.quickstart.exceptions.NoModuleException;
 import uk.co.drnaylor.quickstart.tests.scaffolding.FakeLoaderTests;
 
 import java.lang.reflect.Constructor;
@@ -42,21 +39,39 @@ public class ModuleConfigurationAdapterTests extends FakeLoaderTests {
                 DefaultLogger.INSTANCE,
                 (Function<ConfigurationOptions, ConfigurationOptions>) configurationOptions -> configurationOptions);
 
+    }
+
+    @Test
+    public void testGettingModulesConfig() throws Exception {
         HashMap<String, LoadingStatus> m = Maps.newHashMap();
         m.put("d", LoadingStatus.DISABLED);
         m.put("e", LoadingStatus.ENABLED);
         m.put("f", LoadingStatus.FORCELOAD);
         HashMap<String, String> r = Maps.newHashMap();
-        config.attachConfigAdapter(ModulesConfigAdapter.modulesKey, new ModulesConfigAdapter(m, r, DefaultLogger.INSTANCE));
+        config.attachConfigAdapter(ModulesConfigAdapter.modulesKey, new ModulesConfigAdapter(m, r, DefaultLogger.INSTANCE, "modules", null));
+
+        ModulesConfigAdapter mca = config.getConfigAdapterForModule("modules", ModulesConfigAdapter.class);
+        Map<String, LoadingStatus> mm = mca.getNode();
+
+        Assert.assertEquals(LoadingStatus.DISABLED, mm.get("d"));
+        Assert.assertEquals(LoadingStatus.ENABLED, mm.get("e"));
+        Assert.assertEquals(LoadingStatus.FORCELOAD, mm.get("f"));
     }
 
     @Test
-    public void testGettingModulesConfig() throws NoModuleException, IncorrectAdapterTypeException, ObjectMappingException {
-        ModulesConfigAdapter mca = config.getConfigAdapterForModule("modules", ModulesConfigAdapter.class);
-        Map<String, LoadingStatus> m = mca.getNode();
+    public void testModulesConfigSectionCanBeRelocated() throws Exception {
+        HashMap<String, LoadingStatus> m = Maps.newHashMap();
+        m.put("d", LoadingStatus.DISABLED);
+        m.put("e", LoadingStatus.ENABLED);
+        m.put("f", LoadingStatus.FORCELOAD);
+        HashMap<String, String> r = Maps.newHashMap();
+        config.attachConfigAdapter("m", new ModulesConfigAdapter(m, r, DefaultLogger.INSTANCE, "m", null));
 
-        Assert.assertEquals(LoadingStatus.DISABLED, m.get("d"));
-        Assert.assertEquals(LoadingStatus.ENABLED, m.get("e"));
-        Assert.assertEquals(LoadingStatus.FORCELOAD, m.get("f"));
+        ModulesConfigAdapter mca = config.getConfigAdapterForModule("m", ModulesConfigAdapter.class);
+        Map<String, LoadingStatus> mm = mca.getNode();
+
+        Assert.assertEquals(LoadingStatus.DISABLED, mm.get("d"));
+        Assert.assertEquals(LoadingStatus.ENABLED, mm.get("e"));
+        Assert.assertEquals(LoadingStatus.FORCELOAD, mm.get("f"));
     }
 }

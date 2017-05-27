@@ -19,12 +19,13 @@ import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import javax.annotation.Nullable;
+
 /**
  * Defines the configuration file that loads the modules, and any {@link AbstractConfigAdapter}s.
  */
 public final class SystemConfig<N extends ConfigurationNode, T extends ConfigurationLoader<N>> extends AbstractAdaptableConfig<N, T> {
 
-    private final String modulesNode = "modules";
     private final LoggerProxy proxy;
     private ModulesConfigAdapter configAdapter;
 
@@ -33,7 +34,8 @@ public final class SystemConfig<N extends ConfigurationNode, T extends Configura
         this.proxy = proxy;
     }
 
-    void attachModulesConfig(List<ModuleSpec> defaults, Function<Class<? extends Module>, String> description) throws IOException {
+    void attachModulesConfig(List<ModuleSpec> defaults, Function<Class<? extends Module>, String> description, String modulesNode,
+            @Nullable String descriptionForModules) throws IOException {
         Preconditions.checkNotNull(defaults);
         Preconditions.checkState(configAdapter == null);
 
@@ -41,8 +43,8 @@ public final class SystemConfig<N extends ConfigurationNode, T extends Configura
         Map<String, String> msdesc = defaults.stream()
                 .collect(Collectors.toMap(k -> k.getId().toLowerCase(), k -> description.apply(k.getModuleClass())));
 
-        configAdapter = new ModulesConfigAdapter(msls, msdesc, proxy);
-        this.attachConfigAdapter(modulesNode, configAdapter);
+        configAdapter = new ModulesConfigAdapter(msls, msdesc, proxy, modulesNode, descriptionForModules);
+        this.attachConfigAdapter(modulesNode, configAdapter, descriptionForModules);
     }
 
     public ModulesConfigAdapter getConfigAdapter() {

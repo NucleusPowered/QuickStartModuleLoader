@@ -75,6 +75,8 @@ public final class DiscoveryModuleContainer extends ModuleContainer {
      * @param function            The {@link Function} that transforms the {@link ConfigurationOptions}.
      * @param requiresAnnotation   Whether modules require a {@link ModuleData} annotation.
      * @param processDoNotMerge   Whether module configs will have {@link NoMergeIfPresent} annotations processed.
+     * @param moduleSection        The name of the section that contains the module enable/disable switches.
+     * @param moduleSectionHeader  The comment header for the "module" section
      *
      * @throws QuickStartModuleDiscoveryException if there is an error starting the Module Container.
      */
@@ -92,9 +94,11 @@ public final class DiscoveryModuleContainer extends ModuleContainer {
             boolean requiresAnnotation,
             boolean processDoNotMerge,
             @Nullable Function<Module, String> headerProcessor,
-            @Nullable Function<Class<? extends Module>, String> descriptionProcessor) throws QuickStartModuleDiscoveryException {
+            @Nullable Function<Class<? extends Module>, String> descriptionProcessor,
+            String moduleSection,
+            @Nullable String moduleSectionHeader) throws QuickStartModuleDiscoveryException {
         super(configurationLoader, loggerProxy, enabler, onPreEnable, onEnable, onPostEnable, function, requiresAnnotation, processDoNotMerge,
-                headerProcessor, descriptionProcessor);
+                headerProcessor, descriptionProcessor, moduleSection, moduleSectionHeader);
         this.classLoader = loader;
         this.constructor = constructor;
         this.packageLocation = packageBase;
@@ -197,7 +201,7 @@ public final class DiscoveryModuleContainer extends ModuleContainer {
             checkBuild();
             return new DiscoveryModuleContainer(configurationLoader, classLoader, packageToScan, constructor, enabler, loggerProxy,
                     onPreEnable, onEnable, onPostEnable, configurationOptionsTransformer, requireAnnotation, doNotMerge,
-                    moduleConfigurationHeader, moduleDescriptionHandler);
+                    moduleConfigurationHeader, moduleDescriptionHandler, moduleConfigSection, moduleDescription);
         }
     }
 }

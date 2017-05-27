@@ -117,6 +117,16 @@ public abstract class ModuleContainer {
     private final Function<Class<? extends Module>, String> descriptionProcessor;
 
     /**
+     * The name of the configuration section that contains the module flags
+     */
+    private final String moduleSection;
+
+    /**
+     * The header of the configuration section that contains the module flags
+     */
+    @Nullable private final String moduleSectionHeader;
+
+    /**
      * Constructs a {@link ModuleContainer} and starts discovery of the modules.
      *
      * @param <N>                  The type of {@link ConfigurationNode} to use.
@@ -131,6 +141,8 @@ public abstract class ModuleContainer {
      * @param processDoNotMerge    Whether module configs will have {@link NoMergeIfPresent} annotations processed.
      * @param headerProcessor      The {@link Function} to use when adding headers to module config sections. {@code null} means no headers.
      * @param descriptionProcessor The {@link Function} to use when adding descriptions to modules. {@code null} means no descriptions.
+     * @param moduleSection        The name of the section that contains the module enable/disable switches.
+     * @param moduleSectionHeader  The comment header for the "module" section
      *
      * @throws QuickStartModuleDiscoveryException if there is an error starting the Module Container.
      */
@@ -144,7 +156,9 @@ public abstract class ModuleContainer {
                                                             boolean requireAnnotation,
                                                             boolean processDoNotMerge,
                                                             @Nullable Function<Module, String> headerProcessor,
-                                                            @Nullable Function<Class<? extends Module>, String> descriptionProcessor
+                                                            @Nullable Function<Class<? extends Module>, String> descriptionProcessor,
+                                                            String moduleSection,
+                                                            @Nullable String moduleSectionHeader
             ) throws QuickStartModuleDiscoveryException {
 
         try {
@@ -165,6 +179,8 @@ public abstract class ModuleContainer {
                 return null;
             } : descriptionProcessor;
             this.headerProcessor = headerProcessor == null ? m -> "" : headerProcessor;
+            this.moduleSection = moduleSection;
+            this.moduleSectionHeader = moduleSectionHeader;
         } catch (Exception e) {
             throw new QuickStartModuleDiscoveryException("Unable to start QuickStart", e);
         }
@@ -200,7 +216,7 @@ public abstract class ModuleContainer {
                     .map(Map.Entry::getValue).collect(Collectors.toList());
 
             // Attaches config adapter and loads in the defaults.
-            config.attachModulesConfig(moduleSpecList, this.descriptionProcessor);
+            config.attachModulesConfig(moduleSpecList, this.descriptionProcessor, this.moduleSection, this.moduleSectionHeader);
             config.saveAdapterDefaults(false);
 
             // Load what we have in config into our discovered modules.
@@ -587,6 +603,8 @@ public abstract class ModuleContainer {
         protected boolean doNotMerge = false;
         @Nullable protected Function<Class<? extends Module>, String> moduleDescriptionHandler = null;
         @Nullable protected Function<Module, String> moduleConfigurationHeader = null;
+        protected String moduleConfigSection = "modules";
+        @Nullable protected String moduleDescription = null;
 
         protected abstract T getThis();
 
@@ -729,8 +747,32 @@ public abstract class ModuleContainer {
             return getThis();
         }
 
+        /**
+         * Sets the name of the section that contains the module enable/disable flags.
+         *
+         * @param name The name of the section. Defaults to "modules"
+         * @return This {@link Builder}, for chaining.
+         */
+        public T setModuleConfigSectionName(String name) {
+            Preconditions.checkNotNull(name);
+            this.moduleConfigSection = name;
+            return getThis();
+        }
+
+        /**
+         * Sets the description for the module config section.
+         *
+         * @param description The description, or {@code null} to use the default.
+         * @return This {@link Builder}, for chaining.
+         */
+        public T setModuleConfigSectionDescription(@Nullable String description) {
+            this.moduleDescription = description;
+            return getThis();
+        }
+
         protected void checkBuild() {
             Preconditions.checkNotNull(configurationLoader);
+            Preconditions.checkNotNull(moduleConfigSection);
 
             if (loggerProxy == null) {
                 loggerProxy = DefaultLogger.INSTANCE;

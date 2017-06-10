@@ -176,7 +176,7 @@ public abstract class ModuleContainer {
                     return md.description();
                 }
 
-                return null;
+                return "";
             } : descriptionProcessor;
             this.headerProcessor = headerProcessor == null ? m -> "" : headerProcessor;
             this.moduleSection = moduleSection;

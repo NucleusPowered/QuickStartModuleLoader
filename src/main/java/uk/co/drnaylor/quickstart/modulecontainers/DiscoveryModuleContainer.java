@@ -7,7 +7,8 @@ package uk.co.drnaylor.quickstart.modulecontainers;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
-import com.google.common.reflect.ClassPath;
+import io.github.lukehutch.fastclasspathscanner.FastClasspathScanner;
+import io.github.lukehutch.fastclasspathscanner.scanner.ScanResult;
 import ninja.leaping.configurate.ConfigurationNode;
 import ninja.leaping.configurate.ConfigurationOptions;
 import ninja.leaping.configurate.loader.ConfigurationLoader;
@@ -110,8 +111,9 @@ public final class DiscoveryModuleContainer extends ModuleContainer {
     @Override
     protected Set<Class<? extends Module>> discoverModules() throws Exception {
         // Get the modules out.
-        Set<ClassPath.ClassInfo> ci = ClassPath.from(classLoader).getTopLevelClassesRecursive(packageLocation);
-        loadedClasses.addAll(ci.stream().map(ClassPath.ClassInfo::load).collect(Collectors.toSet()));
+        ScanResult scanResult = new FastClasspathScanner(packageLocation).scan();
+        loadedClasses.addAll(scanResult.classNamesToClassRefs(scanResult.getNamesOfAllClasses().stream().filter(x -> x.startsWith(packageLocation))
+                .collect(Collectors.toList())));
         Set<Class<? extends Module>> modules = loadedClasses.stream().filter(Module.class::isAssignableFrom)
                 .map(x -> (Class<? extends Module>)x.asSubclass(Module.class)).collect(Collectors.toSet());
 

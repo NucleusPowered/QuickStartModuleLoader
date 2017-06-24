@@ -33,6 +33,15 @@ import java.util.stream.Collectors;
 
 import javax.annotation.Nullable;
 
+/**
+ * The Discovery module container tries to load and instantiate modules that are
+ * discovered using reflection. It requires a root package to scan - it will
+ * then use a discovery strategy to load all classes and from there, pick out
+ * the modules.
+ *
+ * <p>All classes that were discovered by the module container are available
+ * in the container, to save users from multiple classpath scans.</p>
+ */
 public final class DiscoveryModuleContainer extends ModuleContainer {
 
     /**

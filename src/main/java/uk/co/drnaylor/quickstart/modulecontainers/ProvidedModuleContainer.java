@@ -26,6 +26,9 @@ import java.util.stream.Collectors;
 
 import javax.annotation.Nullable;
 
+/**
+ * The provided module container is provided pre-constructed {@link Module}s to work with.
+ */
 public final class ProvidedModuleContainer extends ModuleContainer {
 
     public static Builder builder() {

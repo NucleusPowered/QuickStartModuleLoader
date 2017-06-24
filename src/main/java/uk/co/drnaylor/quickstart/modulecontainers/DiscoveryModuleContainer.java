@@ -7,6 +7,7 @@ package uk.co.drnaylor.quickstart.modulecontainers;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
+import com.google.common.reflect.ClassPath;
 import io.github.lukehutch.fastclasspathscanner.FastClasspathScanner;
 import io.github.lukehutch.fastclasspathscanner.scanner.ScanResult;
 import ninja.leaping.configurate.ConfigurationNode;
@@ -23,7 +24,9 @@ import uk.co.drnaylor.quickstart.exceptions.QuickStartModuleDiscoveryException;
 import uk.co.drnaylor.quickstart.loaders.ModuleConstructor;
 import uk.co.drnaylor.quickstart.loaders.ModuleEnabler;
 import uk.co.drnaylor.quickstart.loaders.SimpleModuleConstructor;
+import uk.co.drnaylor.quickstart.util.ThrownBiFunction;
 
+import java.util.HashSet;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -62,6 +65,11 @@ public final class DiscoveryModuleContainer extends ModuleContainer {
     private final Set<Class<?>> loadedClasses = Sets.newHashSet();
 
     /**
+     * The strategy for loading classes on the classpath.
+     */
+    private final ThrownBiFunction<String, ClassLoader, Set<Class<?>>, Exception> strategy;
+
+    /**
      * Constructs a {@link ModuleContainer} and starts discovery of the modules.
      *
      * @param configurationLoader The {@link ConfigurationLoader} that contains details of whether the modules should be enabled or not.
@@ -74,10 +82,11 @@ public final class DiscoveryModuleContainer extends ModuleContainer {
      * @param onEnable            The {@link Procedure} to run on enable, before modules are pre-enabled.
      * @param onPostEnable        The {@link Procedure} to run on post enable, before modules are pre-enabled.
      * @param function            The {@link Function} that transforms the {@link ConfigurationOptions}.
-     * @param requiresAnnotation   Whether modules require a {@link ModuleData} annotation.
+     * @param requiresAnnotation  Whether modules require a {@link ModuleData} annotation.
      * @param processDoNotMerge   Whether module configs will have {@link NoMergeIfPresent} annotations processed.
-     * @param moduleSection        The name of the section that contains the module enable/disable switches.
-     * @param moduleSectionHeader  The comment header for the "module" section
+     * @param moduleSection       The name of the section that contains the module enable/disable switches.
+     * @param moduleSectionHeader The comment header for the "module" section
+     * @param strategy            The strategy to use to get classes on the classpath
      *
      * @throws QuickStartModuleDiscoveryException if there is an error starting the Module Container.
      */
@@ -97,12 +106,14 @@ public final class DiscoveryModuleContainer extends ModuleContainer {
             @Nullable Function<Module, String> headerProcessor,
             @Nullable Function<Class<? extends Module>, String> descriptionProcessor,
             String moduleSection,
-            @Nullable String moduleSectionHeader) throws QuickStartModuleDiscoveryException {
+            @Nullable String moduleSectionHeader,
+            ThrownBiFunction<String, ClassLoader, Set<Class<?>>, Exception> strategy) throws QuickStartModuleDiscoveryException {
         super(configurationLoader, loggerProxy, enabler, onPreEnable, onEnable, onPostEnable, function, requiresAnnotation, processDoNotMerge,
                 headerProcessor, descriptionProcessor, moduleSection, moduleSectionHeader);
         this.classLoader = loader;
         this.constructor = constructor;
         this.packageLocation = packageBase;
+        this.strategy = strategy;
     }
 
     /**
@@ -111,9 +122,8 @@ public final class DiscoveryModuleContainer extends ModuleContainer {
     @Override
     protected Set<Class<? extends Module>> discoverModules() throws Exception {
         // Get the modules out.
-        ScanResult scanResult = new FastClasspathScanner(packageLocation).scan();
-        loadedClasses.addAll(scanResult.classNamesToClassRefs(scanResult.getNamesOfAllClasses().stream().filter(x -> x.startsWith(packageLocation))
-                .collect(Collectors.toList())));
+        loadedClasses.addAll(this.strategy.apply(packageLocation, classLoader));
+
         Set<Class<? extends Module>> modules = loadedClasses.stream().filter(Module.class::isAssignableFrom)
                 .map(x -> (Class<? extends Module>)x.asSubclass(Module.class)).collect(Collectors.toSet());
 
@@ -143,6 +153,7 @@ public final class DiscoveryModuleContainer extends ModuleContainer {
         private String packageToScan;
         private ModuleConstructor constructor = SimpleModuleConstructor.INSTANCE;
         private ClassLoader classLoader;
+        private ThrownBiFunction<String, ClassLoader, Set<Class<?>>, Exception> strategy = DiscoveryStrategy.DEFAULT;
 
         /**
          * Sets the root package name to scan.
@@ -178,6 +189,21 @@ public final class DiscoveryModuleContainer extends ModuleContainer {
             return this;
         }
 
+        /**
+         * Sets the {@link DiscoveryStrategy} for this container.
+         *
+         * <p>The strategy consumes the package to scan and the
+         * {@link ClassLoader}, and returns a {@link Set} of
+         * {@link Class}es.</p>
+         *
+         * @param strategy The strategy to use
+         * @return This {@link ModuleContainer.Builder}, for chaining.
+         */
+        public Builder setDiscoveryStrategy(ThrownBiFunction<String, ClassLoader, Set<Class<?>>, Exception> strategy) {
+            this.strategy = Preconditions.checkNotNull(strategy);
+            return this;
+        }
+
         @Override
         protected Builder getThis() {
             return this;
@@ -203,7 +229,56 @@ public final class DiscoveryModuleContainer extends ModuleContainer {
             checkBuild();
             return new DiscoveryModuleContainer(configurationLoader, classLoader, packageToScan, constructor, enabler, loggerProxy,
                     onPreEnable, onEnable, onPostEnable, configurationOptionsTransformer, requireAnnotation, doNotMerge,
-                    moduleConfigurationHeader, moduleDescriptionHandler, moduleConfigSection, moduleDescription);
+                    moduleConfigurationHeader, moduleDescriptionHandler, moduleConfigSection, moduleDescription, strategy);
         }
     }
+
+    /**
+     * Determines the strategy used to discover modules.
+     */
+    public enum DiscoveryStrategy implements ThrownBiFunction<String, ClassLoader, Set<Class<?>>, Exception> {
+
+        /**
+         * The default in-built strategy first uses the Fast Classpath Scanner,
+         * and if that fails to find anything, falls back to the Google reflect
+         * library.
+         */
+        DEFAULT {
+            @Override
+            public Set<Class<?>> apply(String s, ClassLoader cl) throws Exception {
+                Set<Class<?>> classes = FAST_CLASSPATH_SCANNER.apply(s, cl);
+                if (classes.isEmpty()) {
+                    return GOOGLE_REFLECT.apply(s, cl);
+                }
+
+                return classes;
+            }
+        },
+
+        /**
+         * Uses the Fast Classpath Scanner to discover classes
+         */
+        FAST_CLASSPATH_SCANNER {
+            @Override
+            public Set<Class<?>> apply(String s, ClassLoader cl) throws Exception {
+                ScanResult scanResult = new FastClasspathScanner(s).scan();
+                return new HashSet<>(scanResult.classNamesToClassRefs(scanResult.getNamesOfAllClasses().stream()
+                        .filter(x -> x.startsWith(s))
+                        .collect(Collectors.toList())));
+            }
+        },
+
+        /**
+         * Uses Google Reflect to discover classes
+         */
+        GOOGLE_REFLECT {
+            @Override
+            public Set<Class<?>> apply(String s, ClassLoader cl) throws Exception {
+                Set<ClassPath.ClassInfo> ci = ClassPath.from(cl).getTopLevelClassesRecursive(s);
+                return ci.stream().map(ClassPath.ClassInfo::load).collect(Collectors.toSet());
+            }
+        }
+
+    }
+
 }

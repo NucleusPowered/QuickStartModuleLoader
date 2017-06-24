@@ -588,6 +588,16 @@ public abstract class ModuleContainer {
     }
 
     /**
+     * Gets the registered module ID, if it exists.
+     *
+     * @param module The module.
+     * @return The module ID, or an empty {@link Optional#empty()}
+     */
+    public final Optional<String> getIdForModule(Module module) {
+        return discoveredModules.entrySet().stream().filter(x -> x.getValue().getModuleClass() == module.getClass()).map(Map.Entry::getKey).findFirst();
+    }
+
+    /**
      * Builder class to create a {@link ModuleContainer}
      */
     protected static abstract class Builder<R extends ModuleContainer, T extends Builder<R, T>> {

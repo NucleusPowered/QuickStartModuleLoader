@@ -600,7 +600,7 @@ public abstract class ModuleContainer {
     /**
      * Builder class to create a {@link ModuleContainer}
      */
-    protected static abstract class Builder<R extends ModuleContainer, T extends Builder<R, T>> {
+    public static abstract class Builder<R extends ModuleContainer, T extends Builder<R, T>> {
 
         protected ConfigurationLoader<? extends ConfigurationNode> configurationLoader;
         protected boolean requireAnnotation = false;

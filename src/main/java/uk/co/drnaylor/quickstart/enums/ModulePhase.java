@@ -4,17 +4,27 @@
  */
 package uk.co.drnaylor.quickstart.enums;
 
-public enum ModulePhase {
+import uk.co.drnaylor.quickstart.enums.interfaces.IModulePhase;
+
+public enum ModulePhase implements IModulePhase {
 
     /**
      * The module has been discovered, but not constructed.
      */
-    DISCOVERED,
+    DISCOVERED {
+        @Override public boolean canSetLoadingPhase() {
+            return true;
+        }
+    },
 
     /**
-     * The module has been constructed, but not enabled.
+     * The module has been constructed, but not enabled, and is going through dependency checks.
      */
-    CONSTRUCTED,
+    CONSTRUCTED {
+        @Override public boolean canSetLoadingPhase() {
+            return true;
+        }
+    },
 
     /**
      * The module has been enabled.

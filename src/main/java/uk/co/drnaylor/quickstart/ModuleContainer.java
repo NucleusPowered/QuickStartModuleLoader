@@ -20,6 +20,7 @@ import uk.co.drnaylor.quickstart.enums.ConstructionPhase;
 import uk.co.drnaylor.quickstart.enums.LoadingStatus;
 import uk.co.drnaylor.quickstart.enums.ModulePhase;
 import uk.co.drnaylor.quickstart.exceptions.IncorrectAdapterTypeException;
+import uk.co.drnaylor.quickstart.exceptions.MissingDependencyException;
 import uk.co.drnaylor.quickstart.exceptions.NoModuleException;
 import uk.co.drnaylor.quickstart.exceptions.QuickStartModuleDiscoveryException;
 import uk.co.drnaylor.quickstart.exceptions.QuickStartModuleLoaderException;
@@ -30,6 +31,7 @@ import java.io.IOException;
 import java.text.MessageFormat;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -193,20 +195,30 @@ public abstract class ModuleContainer {
 
             Set<Class<? extends Module>> modules = discoverModules();
             HashMap<String, ModuleSpec> discovered = Maps.newHashMap();
-            modules.forEach(s -> {
+            for (Class<? extends Module> s : modules) {
                 // If we have a module annotation, we are golden.
+                String id;
+                ModuleSpec ms;
                 if (s.isAnnotationPresent(ModuleData.class)) {
                     ModuleData md = s.getAnnotation(ModuleData.class);
-                    discovered.put(md.id().toLowerCase(), new ModuleSpec(s, md));
+                    id = md.id().toLowerCase();
+                    ms = new ModuleSpec(s, md);
                 } else if (this.requireAnnotation) {
                     loggerProxy.warn(MessageFormat.format("The module class {0} does not have a ModuleData annotation associated with it. "
                             + "It is not being loaded as the module container requires the annotation to be present.", s.getClass().getName()));
+                    continue;
                 } else {
-                    String id = s.getClass().getName().toLowerCase();
+                    id = s.getClass().getName().toLowerCase();
                     loggerProxy.warn(MessageFormat.format("The module {0} does not have a ModuleData annotation associated with it. We're just assuming an ID of {0}.", id));
-                    discovered.put(id, new ModuleSpec(s, id, id, LoadingStatus.ENABLED, false));
+                    ms = new ModuleSpec(s, id, id, LoadingStatus.ENABLED, false);
                 }
-            });
+
+                if (discovered.containsKey(id)) {
+                    throw new QuickStartModuleDiscoveryException("Duplicate module ID \"" + id + "\" was discovered - loading cannot continue.");
+                }
+
+                discovered.put(id, ms);
+            }
 
             // Create the dependency map.
             resolveDependencyOrder(discovered);
@@ -240,6 +252,8 @@ public abstract class ModuleContainer {
 
             // Modules have been discovered.
             currentPhase = ConstructionPhase.DISCOVERED;
+        } catch (QuickStartModuleDiscoveryException ex) {
+            throw ex;
         } catch (Exception e) {
             throw new QuickStartModuleDiscoveryException("Unable to discover QuickStart modules", e);
         }
@@ -270,6 +284,21 @@ public abstract class ModuleContainer {
             modules.remove(x.getKey());
         });
 
+    }
+
+    private boolean dependenciesSatisfied(ModuleSpec moduleSpec, Set<String> enabledModules) {
+        if (moduleSpec.getDependencies().isEmpty()) {
+            return true;
+        }
+
+        for (String m : moduleSpec.getDependencies()) {
+            if (!enabledModules.contains(m) || !dependenciesSatisfied(this.discoveredModules.get(m), enabledModules)) {
+                return false;
+            }
+        }
+
+        // We know the deps are satisfied.
+        return true;
     }
 
     protected abstract Set<Class<? extends Module>> discoverModules() throws Exception;
@@ -398,7 +427,8 @@ public abstract class ModuleContainer {
         Set<String> disabledModules = getModules(ModuleStatusTristate.DISABLE);
         while (!disabledModules.isEmpty()) {
             // Find any modules that have dependencies on disabled modules, and disable them.
-            List<ModuleSpec> toDisable = getModules(ModuleStatusTristate.ENABLE).stream().map(discoveredModules::get).filter(x -> !Collections.disjoint(disabledModules, x.getDependencies())).collect(Collectors.toList());
+            List<ModuleSpec> toDisable = getModules(ModuleStatusTristate.ENABLE).stream().map(discoveredModules::get)
+                    .filter(x -> !Collections.disjoint(disabledModules, x.getDependencies())).collect(Collectors.toList());
             if (toDisable.isEmpty()) {
                 break;
             }
@@ -406,7 +436,9 @@ public abstract class ModuleContainer {
             if (toDisable.stream().anyMatch(ModuleSpec::isMandatory)) {
                 String s = toDisable.stream().filter(ModuleSpec::isMandatory).map(ModuleSpec::getId).collect(Collectors.joining(", "));
                 Class<? extends Module> m = toDisable.stream().filter(ModuleSpec::isMandatory).findFirst().get().getModuleClass();
-                throw new QuickStartModuleLoaderException.Construction(m, "Tried to disable mandatory module", new IllegalStateException("Dependency failure, tried to disable a mandatory module (" + s + ")"));
+                throw new QuickStartModuleLoaderException.Construction(m,
+                        "Tried to disable mandatory module",
+                        new IllegalStateException("Dependency failure, tried to disable a mandatory module (" + s + ")"));
             }
 
             toDisable.forEach(k -> {
@@ -442,6 +474,41 @@ public abstract class ModuleContainer {
         if (modules.isEmpty()) {
             currentPhase = ConstructionPhase.ERRORED;
             throw new QuickStartModuleLoaderException.Construction(null, "No modules were constructed.", null);
+        }
+
+        int size = modules.size();
+
+        {
+            Iterator<Map.Entry<String, Module>> im = modules.entrySet().iterator();
+            while (im.hasNext()) {
+                Map.Entry<String, Module> module = im.next();
+                try {
+                    module.getValue().checkExternalDependencies();
+                } catch (MissingDependencyException ex) {
+                    this.discoveredModules.get(module.getKey()).setStatus(LoadingStatus.DISABLED);
+                    this.discoveredModules.get(module.getKey()).setPhase(ModulePhase.DISABLED);
+                    this.loggerProxy.warn("Module " + module.getKey() + " can not be enabled because an external dependency could not be satisfied.");
+                    this.loggerProxy.warn("Message was: " + ex.getMessage());
+                    im.remove();
+                }
+            }
+        }
+
+        while (size != modules.size()) {
+            // We might need to disable modules.
+            size = modules.size();
+            Iterator<Map.Entry<String, Module>> im = modules.entrySet().iterator();
+            while (im.hasNext()) {
+                Map.Entry<String, Module> module = im.next();
+                if (!dependenciesSatisfied(this.discoveredModules.get(module.getKey()), getModules(ModuleStatusTristate.ENABLE))) {
+                    im.remove();
+                    this.loggerProxy.warn("Module " + module.getKey() + " can not be enabled because an external dependency on a module it "
+                            + "depends on could not be satisfied.");
+                    this.discoveredModules.get(module.getKey()).setStatus(LoadingStatus.DISABLED);
+                    this.discoveredModules.get(module.getKey()).setPhase(ModulePhase.DISABLED);
+                }
+            }
+
         }
 
         // Enter Config Adapter phase - attaching before enabling so that enable methods can get any associated configurations.
@@ -524,6 +591,8 @@ public abstract class ModuleContainer {
             // Construction
             Module.RuntimeDisableable module = (Module.RuntimeDisableable)getModule(ms);
             ms.setPhase(ModulePhase.CONSTRUCTED);
+
+            module.checkExternalDependencies();
 
             // Enabling
             for (EnablePhase v : EnablePhase.values()) {

@@ -5,6 +5,7 @@
 package uk.co.drnaylor.quickstart;
 
 import uk.co.drnaylor.quickstart.config.AbstractConfigAdapter;
+import uk.co.drnaylor.quickstart.exceptions.MissingDependencyException;
 
 import java.util.Optional;
 
@@ -22,6 +23,18 @@ public interface Module {
     default Optional<AbstractConfigAdapter<?>> getConfigAdapter() {
         return Optional.empty();
     }
+
+    /**
+     * Performs additional checks to ensure the module has everything it requires loaded.
+     *
+     * <p>
+     *     If a dependency check fails, modules should throw a {@link MissingDependencyException}
+     *     along with a suitable message.
+     * </p>
+     *
+     * @throws MissingDependencyException thrown if a dependency is missing
+     */
+    default void checkExternalDependencies() throws MissingDependencyException {}
 
     /**
      * Runs before the enable phase.

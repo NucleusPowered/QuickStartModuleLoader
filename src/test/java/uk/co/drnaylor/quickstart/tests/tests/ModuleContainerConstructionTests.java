@@ -4,6 +4,8 @@
  */
 package uk.co.drnaylor.quickstart.tests.tests;
 
+import static org.junit.Assert.assertNotNull;
+
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -18,8 +20,6 @@ import uk.co.drnaylor.quickstart.tests.scaffolding.FakeLoaderTests;
 
 import java.util.Set;
 
-import static org.junit.Assert.assertNotNull;
-
 public class ModuleContainerConstructionTests extends FakeLoaderTests {
 
     @Rule
@@ -28,9 +28,17 @@ public class ModuleContainerConstructionTests extends FakeLoaderTests {
     @Test
     public void testThatNoModulesThrow() throws Exception {
         expectedException.expect(QuickStartModuleDiscoveryException.class);
-        expectedException.expectMessage("Unable to discover QuickStart modules");
+        expectedException.expectMessage("No modules were found");
 
         getContainer("uk.co.drnaylor.quickstart.tests.modules.exceptions.notamodule");
+    }
+
+    @Test
+    public void testThatDuplicateIDModulesThrow() throws Exception {
+        expectedException.expect(QuickStartModuleDiscoveryException.class);
+        expectedException.expectMessage("Duplicate module ID \"one\" was discovered - loading cannot continue.");
+
+        getContainer("uk.co.drnaylor.quickstart.tests.modules.exceptions.duplicateid");
     }
 
     @Test(expected = QuickStartModuleLoaderException.Construction.class)

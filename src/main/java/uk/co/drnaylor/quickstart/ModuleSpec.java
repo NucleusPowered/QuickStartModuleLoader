@@ -96,7 +96,7 @@ public final class ModuleSpec {
      * @param status The {@link LoadingStatus}
      */
     void setStatus(LoadingStatus status) {
-        Preconditions.checkState(phase == ModulePhase.DISCOVERED);
+        Preconditions.checkState(phase.canSetLoadingPhase());
         Preconditions.checkState(!isMandatory);
         this.status = status;
     }

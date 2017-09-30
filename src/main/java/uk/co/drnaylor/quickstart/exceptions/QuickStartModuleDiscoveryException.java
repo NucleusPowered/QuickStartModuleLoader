@@ -9,6 +9,10 @@ package uk.co.drnaylor.quickstart.exceptions;
  */
 public class QuickStartModuleDiscoveryException extends Exception {
 
+    public QuickStartModuleDiscoveryException(String message) {
+        super(message);
+    }
+
     public QuickStartModuleDiscoveryException(String message, Exception innerException) {
         super(message, innerException);
     }

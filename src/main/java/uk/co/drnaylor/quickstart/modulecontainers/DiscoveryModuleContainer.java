@@ -20,6 +20,7 @@ import uk.co.drnaylor.quickstart.ModuleSpec;
 import uk.co.drnaylor.quickstart.Procedure;
 import uk.co.drnaylor.quickstart.annotations.ModuleData;
 import uk.co.drnaylor.quickstart.config.NoMergeIfPresent;
+import uk.co.drnaylor.quickstart.exceptions.MultiException;
 import uk.co.drnaylor.quickstart.exceptions.QuickStartModuleDiscoveryException;
 import uk.co.drnaylor.quickstart.loaders.ModuleConstructor;
 import uk.co.drnaylor.quickstart.loaders.ModuleEnabler;
@@ -255,12 +256,27 @@ public final class DiscoveryModuleContainer extends ModuleContainer {
         DEFAULT {
             @Override
             public Set<Class<?>> apply(String s, ClassLoader cl) throws Exception {
-                Set<Class<?>> classes = FAST_CLASSPATH_SCANNER.apply(s, cl);
-                if (classes.isEmpty()) {
-                    return GOOGLE_REFLECT.apply(s, cl);
+                Set<Class<?>> classes = null;
+                Exception exception = null;
+                try {
+                    classes = FAST_CLASSPATH_SCANNER.apply(s, cl);
+                } catch (Exception ex) {
+                    exception = ex;
                 }
 
-                return classes;
+                try {
+                    if (classes == null || classes.isEmpty()) {
+                        return GOOGLE_REFLECT.apply(s, cl);
+                    }
+
+                    return classes;
+                } catch (Exception ex) {
+                    if (exception == null) {
+                        throw ex;
+                    }
+
+                    throw new MultiException(exception, ex);
+                }
             }
         },
 

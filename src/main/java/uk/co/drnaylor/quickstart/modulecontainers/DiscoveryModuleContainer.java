@@ -7,9 +7,6 @@ package uk.co.drnaylor.quickstart.modulecontainers;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
-import com.google.common.reflect.ClassPath;
-import io.github.lukehutch.fastclasspathscanner.FastClasspathScanner;
-import io.github.lukehutch.fastclasspathscanner.scanner.ScanResult;
 import ninja.leaping.configurate.ConfigurationNode;
 import ninja.leaping.configurate.ConfigurationOptions;
 import ninja.leaping.configurate.loader.ConfigurationLoader;
@@ -20,14 +17,13 @@ import uk.co.drnaylor.quickstart.ModuleSpec;
 import uk.co.drnaylor.quickstart.Procedure;
 import uk.co.drnaylor.quickstart.annotations.ModuleData;
 import uk.co.drnaylor.quickstart.config.NoMergeIfPresent;
-import uk.co.drnaylor.quickstart.exceptions.MultiException;
 import uk.co.drnaylor.quickstart.exceptions.QuickStartModuleDiscoveryException;
 import uk.co.drnaylor.quickstart.loaders.ModuleConstructor;
 import uk.co.drnaylor.quickstart.loaders.ModuleEnabler;
 import uk.co.drnaylor.quickstart.loaders.SimpleModuleConstructor;
+import uk.co.drnaylor.quickstart.modulecontainers.discoverystrategies.Strategy;
 import uk.co.drnaylor.quickstart.util.ThrownBiFunction;
 
-import java.util.HashSet;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -77,7 +73,7 @@ public final class DiscoveryModuleContainer extends ModuleContainer {
     /**
      * The strategy for loading classes on the classpath.
      */
-    private final ThrownBiFunction<String, ClassLoader, Set<Class<?>>, Exception> strategy;
+    private final Strategy strategy;
 
     /**
      * Constructs a {@link ModuleContainer} and starts discovery of the modules.
@@ -117,7 +113,7 @@ public final class DiscoveryModuleContainer extends ModuleContainer {
             @Nullable Function<Class<? extends Module>, String> descriptionProcessor,
             String moduleSection,
             @Nullable String moduleSectionHeader,
-            ThrownBiFunction<String, ClassLoader, Set<Class<?>>, Exception> strategy) throws QuickStartModuleDiscoveryException {
+            Strategy strategy) throws QuickStartModuleDiscoveryException {
         super(configurationLoader, loggerProxy, enabler, onPreEnable, onEnable, onPostEnable, function, requiresAnnotation, processDoNotMerge,
                 headerProcessor, descriptionProcessor, moduleSection, moduleSectionHeader);
         this.classLoader = loader;
@@ -132,7 +128,7 @@ public final class DiscoveryModuleContainer extends ModuleContainer {
     @Override
     protected Set<Class<? extends Module>> discoverModules() throws Exception {
         // Get the modules out.
-        loadedClasses.addAll(this.strategy.apply(packageLocation, classLoader));
+        loadedClasses.addAll(this.strategy.discover(packageLocation, classLoader));
 
         Set<Class<? extends Module>> modules = loadedClasses.stream().filter(Module.class::isAssignableFrom)
                 .map(x -> (Class<? extends Module>)x.asSubclass(Module.class)).collect(Collectors.toSet());
@@ -163,7 +159,7 @@ public final class DiscoveryModuleContainer extends ModuleContainer {
         private String packageToScan;
         private ModuleConstructor constructor = SimpleModuleConstructor.INSTANCE;
         private ClassLoader classLoader;
-        private ThrownBiFunction<String, ClassLoader, Set<Class<?>>, Exception> strategy = DiscoveryStrategy.DEFAULT;
+        private Strategy strategy = Strategy.DEFAULT;
 
         /**
          * Sets the root package name to scan.
@@ -208,8 +204,26 @@ public final class DiscoveryModuleContainer extends ModuleContainer {
          *
          * @param strategy The strategy to use
          * @return This {@link ModuleContainer.Builder}, for chaining.
+         * @deprecated Use {@link #setDiscoveryStrategy(Strategy)} instead.
          */
+        @Deprecated
         public Builder setDiscoveryStrategy(ThrownBiFunction<String, ClassLoader, Set<Class<?>>, Exception> strategy) {
+            Preconditions.checkNotNull(strategy);
+            this.strategy = strategy::apply;
+            return this;
+        }
+
+        /**
+         * Sets the {@link Strategy} for this container.
+         *
+         * <p>The strategy consumes the package to scan and the
+         * {@link ClassLoader}, and returns a {@link Set} of
+         * {@link Class}es.</p>
+         *
+         * @param strategy The strategy to use
+         * @return This {@link ModuleContainer.Builder}, for chaining.
+         */
+        public Builder setDiscoveryStrategy(Strategy strategy) {
             this.strategy = Preconditions.checkNotNull(strategy);
             return this;
         }
@@ -245,62 +259,40 @@ public final class DiscoveryModuleContainer extends ModuleContainer {
 
     /**
      * Determines the strategy used to discover modules.
+     *
+     * @deprecated Use {@link Strategy}
      */
+    @Deprecated
     public enum DiscoveryStrategy implements ThrownBiFunction<String, ClassLoader, Set<Class<?>>, Exception> {
 
         /**
-         * The default in-built strategy first uses the Fast Classpath Scanner,
-         * and if that fails to find anything, falls back to the Google reflect
+         * The default in-built strategy uses the Google reflect
          * library.
          */
+        @Deprecated
         DEFAULT {
-            @Override
-            public Set<Class<?>> apply(String s, ClassLoader cl) throws Exception {
-                Set<Class<?>> classes = null;
-                Exception exception = null;
-                try {
-                    classes = FAST_CLASSPATH_SCANNER.apply(s, cl);
-                } catch (Exception ex) {
-                    exception = ex;
-                }
-
-                try {
-                    if (classes == null || classes.isEmpty()) {
-                        return GOOGLE_REFLECT.apply(s, cl);
-                    }
-
-                    return classes;
-                } catch (Exception ex) {
-                    if (exception == null) {
-                        throw ex;
-                    }
-
-                    throw new MultiException(exception, ex);
-                }
+            @Override public Set<Class<?>> apply(String s, ClassLoader classLoader) throws Exception {
+                return Strategy.DEFAULT.discover(s, classLoader);
             }
         },
 
         /**
-         * Uses the Fast Classpath Scanner to discover classes
+         * Discovers classes using the DEFAULT. Does not use the Fast Classpath Scanner any more.
          */
+        @Deprecated
         FAST_CLASSPATH_SCANNER {
-            @Override
-            public Set<Class<?>> apply(String s, ClassLoader cl) throws Exception {
-                ScanResult scanResult = new FastClasspathScanner(s).scan();
-                return new HashSet<>(scanResult.classNamesToClassRefs(scanResult.getNamesOfAllClasses().stream()
-                        .filter(x -> x.startsWith(s))
-                        .collect(Collectors.toList())));
+            @Override public Set<Class<?>> apply(String s, ClassLoader classLoader) throws Exception {
+                return Strategy.DEFAULT.discover(s, classLoader);
             }
         },
 
         /**
          * Uses Google Reflect to discover classes
          */
+        @Deprecated
         GOOGLE_REFLECT {
-            @Override
-            public Set<Class<?>> apply(String s, ClassLoader cl) throws Exception {
-                Set<ClassPath.ClassInfo> ci = ClassPath.from(cl).getTopLevelClassesRecursive(s);
-                return ci.stream().map(ClassPath.ClassInfo::load).collect(Collectors.toSet());
+            @Override public Set<Class<?>> apply(String s, ClassLoader classLoader) throws Exception {
+                return Strategy.DEFAULT.discover(s, classLoader);
             }
         }
 

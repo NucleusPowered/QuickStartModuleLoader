@@ -10,7 +10,7 @@ plugins {
 ext.url = 'http://qsml.dualspiral.co.uk'
 
 group 'uk.co.drnaylor'
-version '0.9.1-SNAPSHOT'
+version '0.10.0'
 
 defaultTasks 'licenseFormat'
 
@@ -19,10 +19,13 @@ targetCompatibility = 1.8
 
 repositories {
     jcenter()
+    maven {
+        name 'drnaylor'
+        url 'http://repo.drnaylor.co.uk/artifactory/list/quickstart'
+    }
 }
 
 dependencies {
-    compile "io.github.lukehutch:fast-classpath-scanner:2.7.4"
     compile "ninja.leaping.configurate:configurate-core:3.2"
     compile group: 'com.google.code.findbugs', name: 'jsr305', version: '3.0.2'
     testCompile "ninja.leaping.configurate:configurate-gson:3.2"

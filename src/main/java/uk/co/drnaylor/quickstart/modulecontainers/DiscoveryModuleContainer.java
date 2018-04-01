@@ -204,7 +204,7 @@ public final class DiscoveryModuleContainer extends ModuleContainer {
          *
          * @param strategy The strategy to use
          * @return This {@link ModuleContainer.Builder}, for chaining.
-         * @deprecated Use {@link #setDiscoveryStrategy(Strategy)} instead.
+         * @deprecated Use {@link #setStrategy(Strategy)} instead.
          */
         @Deprecated
         public Builder setDiscoveryStrategy(ThrownBiFunction<String, ClassLoader, Set<Class<?>>, Exception> strategy) {
@@ -223,7 +223,7 @@ public final class DiscoveryModuleContainer extends ModuleContainer {
          * @param strategy The strategy to use
          * @return This {@link ModuleContainer.Builder}, for chaining.
          */
-        public Builder setDiscoveryStrategy(Strategy strategy) {
+        public Builder setStrategy(Strategy strategy) {
             this.strategy = Preconditions.checkNotNull(strategy);
             return this;
         }

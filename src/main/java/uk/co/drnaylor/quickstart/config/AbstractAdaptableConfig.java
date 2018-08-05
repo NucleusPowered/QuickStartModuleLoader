@@ -229,16 +229,17 @@ public class AbstractAdaptableConfig<N extends ConfigurationNode, T extends Conf
 
         // Now, we do transformations.
         moduleConfigAdapters.forEach((k, v) -> {
-            List<AbstractConfigAdapter.Transformation> transformations = v.getTransformations();
-            if (!transformations.isEmpty() && v.isAttached()) {
-                ConfigurationNode nodeToTransform = node.getNode(k.toLowerCase());
-
-                if (!nodeToTransform.isVirtual()) {
+            ConfigurationNode nodeToTransform = node.getNode(k.toLowerCase());
+            if (!nodeToTransform.isVirtual()) {
+                v.manualTransform(nodeToTransform);
+                List<AbstractConfigAdapter.Transformation> transformations = v.getTransformations();
+                if (!transformations.isEmpty() && v.isAttached()) {
                     ConfigurationTransformation.Builder ctBuilder = ConfigurationTransformation.builder();
                     transformations.forEach(x -> ctBuilder.addAction(x.getObjectPath(), x.getAction()));
                     ctBuilder.build().apply(nodeToTransform);
-                    node.getNode(k.toLowerCase()).setValue(nodeToTransform);
                 }
+
+                node.getNode(k.toLowerCase()).setValue(nodeToTransform);
             }
         });
 

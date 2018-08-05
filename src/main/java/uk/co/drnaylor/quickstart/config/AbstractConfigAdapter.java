@@ -196,6 +196,14 @@ public abstract class AbstractConfigAdapter<R> {
     }
 
     /**
+     * Manually transform a configuration node. This happens before {@link #getTransformations()}
+     * is called.
+     *
+     * @param node The node to transform.
+     */
+    protected void manualTransform(ConfigurationNode node) {};
+
+    /**
      * Gets the transformations that are required to this section.
      *
      * @return The transformations that are required.

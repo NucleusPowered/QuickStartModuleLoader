@@ -47,7 +47,7 @@ import javax.annotation.Nullable;
  */
 public abstract class AbstractConfigAdapter<R> {
 
-    private AbstractAdaptableConfig<?, ?> attachedConfig = null;
+    private AbstractAdaptableConfig<?> attachedConfig = null;
     private Supplier<ConfigurationNode> nodeGetter = null;
     private Supplier<ConfigurationNode> nodeCreator = null;
     private Consumer<ConfigurationNode> nodeSaver = null;
@@ -55,7 +55,7 @@ public abstract class AbstractConfigAdapter<R> {
     @Nullable private String header = null;
 
     final void attachConfig(String module,
-            AbstractAdaptableConfig<?, ?> adapter,
+            AbstractAdaptableConfig<?> adapter,
             Supplier<ConfigurationNode> nodeGetter,
             Consumer<ConfigurationNode> nodeSaver,
             Supplier<ConfigurationNode> nodeCreator,
@@ -90,7 +90,7 @@ public abstract class AbstractConfigAdapter<R> {
      * @param module The module it has been attached to.
      * @param adapter The {@link AbstractAdaptableConfig} that it has been attached to.
      */
-    public void onAttach(String module, AbstractAdaptableConfig<?, ?> adapter) {}
+    public void onAttach(String module, AbstractAdaptableConfig<?> adapter) {}
 
     /**
      * Runs when the config has been detached.
@@ -98,7 +98,7 @@ public abstract class AbstractConfigAdapter<R> {
      * @param module The module it is about to be detached from.
      * @param adapter The {@link AbstractAdaptableConfig} that it is about to be detached from.
      */
-    public void onDetach(String module, AbstractAdaptableConfig<?, ?> adapter) {}
+    public void onDetach(String module, AbstractAdaptableConfig<?> adapter) {}
 
     /**
      * Returns whether this adapter has been attached to a config file.
@@ -123,7 +123,7 @@ public abstract class AbstractConfigAdapter<R> {
      *
      * @return An {@link Optional}, which is empty if the adapter has not been attached yet.
      */
-    public final Optional<AbstractAdaptableConfig<?, ?>> getConfig() {
+    public final Optional<AbstractAdaptableConfig<?>> getConfig() {
         return Optional.ofNullable(attachedConfig);
     }
 

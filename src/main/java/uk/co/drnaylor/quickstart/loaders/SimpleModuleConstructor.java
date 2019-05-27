@@ -10,17 +10,12 @@ import uk.co.drnaylor.quickstart.exceptions.QuickStartModuleLoaderException;
 /**
  * A simple module constructor that tries to construct using a no-args constructor via reflection.
  */
-public class SimpleModuleConstructor implements ModuleConstructor {
+public class SimpleModuleConstructor<R extends Module> implements ModuleConstructor<R> {
 
-    /**
-     * Gets the instance of this {@link SimpleModuleConstructor}
-     */
-    public static final SimpleModuleConstructor INSTANCE = new SimpleModuleConstructor();
-
-    private SimpleModuleConstructor() { }
+    public SimpleModuleConstructor() { }
 
     @Override
-    public Module constructModule(Class<? extends Module> moduleClass) throws QuickStartModuleLoaderException.Construction {
+    public R constructModule(Class<? extends R> moduleClass) throws QuickStartModuleLoaderException.Construction {
         try {
             return moduleClass.newInstance();
         } catch (InstantiationException | IllegalAccessException e) {

@@ -34,22 +34,23 @@ import javax.annotation.Nullable;
  * A configuration manager that allows for {@link AbstractConfigAdapter} to be attached.
  *
  * @param <N> The type of {@link ConfigurationNode} that this configuration will handle.
- * @param <T> The type of {@link ConfigurationLoader} that this configuration will use.
  */
-public class AbstractAdaptableConfig<N extends ConfigurationNode, T extends ConfigurationLoader<N>> {
+public class AbstractAdaptableConfig<N extends ConfigurationNode> {
 
     private Map<String, AbstractConfigAdapter<?>> moduleConfigAdapters = Maps.newHashMap();
 
-    private final T loader;
+    private final ConfigurationLoader<N> loader;
     private N node;
     private final Supplier<ConfigurationNode> nodeCreator;
     private final Function<ConfigurationOptions, ConfigurationOptions> optionsTransformer;
 
-    public AbstractAdaptableConfig(T loader) throws IOException {
+    public AbstractAdaptableConfig(ConfigurationLoader<N> loader) throws IOException {
         this(loader, loader::createEmptyNode, x -> x);
     }
 
-    public AbstractAdaptableConfig(T loader, Supplier<ConfigurationNode> nodeCreator, Function<ConfigurationOptions, ConfigurationOptions> optionsTransformer) throws IOException {
+    public AbstractAdaptableConfig(ConfigurationLoader<N> loader,
+            Supplier<ConfigurationNode> nodeCreator,
+            Function<ConfigurationOptions, ConfigurationOptions> optionsTransformer) throws IOException {
         Preconditions.checkNotNull(loader);
         Preconditions.checkNotNull(nodeCreator);
 

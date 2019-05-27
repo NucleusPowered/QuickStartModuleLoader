@@ -5,52 +5,45 @@
 package uk.co.drnaylor.quickstart.holders;
 
 import com.google.common.base.Preconditions;
-import ninja.leaping.configurate.ConfigurationNode;
-import ninja.leaping.configurate.ConfigurationOptions;
-import ninja.leaping.configurate.loader.ConfigurationLoader;
-import uk.co.drnaylor.quickstart.LoggerProxy;
+import com.google.common.collect.ImmutableMap;
 import uk.co.drnaylor.quickstart.Module;
 import uk.co.drnaylor.quickstart.ModuleHolder;
 import uk.co.drnaylor.quickstart.ModuleSpec;
-import uk.co.drnaylor.quickstart.Procedure;
-import uk.co.drnaylor.quickstart.annotations.ModuleData;
-import uk.co.drnaylor.quickstart.config.NoMergeIfPresent;
 import uk.co.drnaylor.quickstart.exceptions.NoModuleException;
 import uk.co.drnaylor.quickstart.exceptions.QuickStartModuleDiscoveryException;
-import uk.co.drnaylor.quickstart.loaders.ModuleEnabler;
 
 import java.util.Map;
 import java.util.Set;
-import java.util.function.Function;
-import java.util.stream.Collectors;
-
-import javax.annotation.Nullable;
 
 /**
  * The provided module container is provided pre-constructed {@link Module}s to work with.
  */
-public final class ProvidedModuleHolder extends ModuleHolder {
+public final class ProvidedModuleHolder<M extends Module> extends ModuleHolder<M> {
 
-    public static Builder builder() {
-        return new Builder();
+    public static <M extends Module> Builder<M> builder(Class<M> moduleClass) {
+        return new Builder<>(moduleClass);
     }
 
-    private final Map<Class<? extends Module>, Module> moduleMap;
+    private final Map<Class<? extends M>, M> moduleMap;
 
-    private ProvidedModuleHolder(Builder builder) throws QuickStartModuleDiscoveryException {
+    private ProvidedModuleHolder(Builder<M> builder) throws QuickStartModuleDiscoveryException {
         super(builder);
-        this.moduleMap = builder.modules.stream().collect(Collectors.toMap(Module::getClass, v -> v));
+        ImmutableMap.Builder<Class<? extends M>, M> mapBuilder = ImmutableMap.builder();
+        for (M module : builder.modules) {
+            mapBuilder.put((Class<? extends M>) module.getClass(), module);
+        }
+        this.moduleMap = mapBuilder.build();
     }
 
     @Override
-    protected Set<Class<? extends Module>> discoverModules() throws Exception {
+    protected Set<Class<? extends M>> discoverModules() {
         // They've kind of been discovered.
         return moduleMap.keySet();
     }
 
     @Override
-    protected Module getModule(ModuleSpec spec) throws Exception {
-        Module module = moduleMap.get(spec.getModuleClass());
+    protected M getModule(ModuleSpec spec) throws Exception {
+        M module = moduleMap.get(spec.getModuleClass());
         if (module == null) {
             throw new NoModuleException(spec.getName());
         }
@@ -58,9 +51,21 @@ public final class ProvidedModuleHolder extends ModuleHolder {
         return module;
     }
 
-    public static class Builder extends ModuleHolder.Builder<ProvidedModuleHolder, Builder> {
+    public static class Builder<M extends Module> extends ModuleHolder.Builder<M, ProvidedModuleHolder<M>, Builder<M>> {
 
-        private Set<Module> modules;
+        /**
+         * The set of module to load.
+         */
+        private Set<M> modules;
+
+        /**
+         * Creates a builder with the given type of {@link Module}.
+         *
+         * @param moduleType The type of module.
+         */
+        Builder(Class<M> moduleType) {
+            super(moduleType);
+        }
 
         /**
          * Sets the {@link Set} of {@link Module}s that QSML should load.
@@ -68,7 +73,7 @@ public final class ProvidedModuleHolder extends ModuleHolder {
          * @param modules The set of moudules to load.
          * @return This {@link Builder}, for chaining.
          */
-        public Builder setModules(Set<Module> modules) {
+        public Builder<M> setModules(Set<M> modules) {
             Preconditions.checkNotNull(modules);
             Preconditions.checkArgument(!modules.isEmpty());
             this.modules = modules;
@@ -76,7 +81,7 @@ public final class ProvidedModuleHolder extends ModuleHolder {
         }
 
         @Override
-        protected Builder getThis() {
+        protected Builder<M> getThis() {
             return this;
         }
 
@@ -87,13 +92,13 @@ public final class ProvidedModuleHolder extends ModuleHolder {
          * @throws Exception Thrown if the builder how not got all the required information to run.
          */
         @Override
-        public ProvidedModuleHolder build() throws Exception {
+        public ProvidedModuleHolder<M> build() throws Exception {
             Preconditions.checkNotNull(modules);
             Preconditions.checkState(!modules.isEmpty());
 
             checkBuild();
 
-            return new ProvidedModuleHolder(this);
+            return new ProvidedModuleHolder<>(this);
         }
     }
 }

@@ -51,7 +51,12 @@ import javax.annotation.Nullable;
  *     A system may have multiple module containers. Each module container is completely separate from one another.
  * </p>
  */
-public abstract class ModuleHolder {
+public abstract class ModuleHolder<M extends Module> {
+
+    /**
+     * The class type {@link M} of the basic class.
+     */
+    private final Class<M> baseClass;
 
     /**
      * The current phase of the container.
@@ -61,17 +66,17 @@ public abstract class ModuleHolder {
     /**
      * The modules that have been discovered by the container.
      */
-    protected final Map<String, ModuleSpec> discoveredModules = Maps.newLinkedHashMap();
+    private final Map<String, ModuleSpec<M>> discoveredModules = Maps.newLinkedHashMap();
 
     /**
      * Loaded modules that can be disabled.
      */
-    protected final Map<String, Module.RuntimeDisableable> enabledDisableableModules = Maps.newHashMap();
+    private final Map<String, Module.RuntimeDisableable> enabledDisableableModules = Maps.newHashMap();
 
     /**
      * Contains the main configuration file.
      */
-    protected final SystemConfig<?, ? extends ConfigurationLoader<?>> config;
+    protected final SystemConfig<?, M> config;
 
     /**
      * The logger to use.
@@ -111,12 +116,12 @@ public abstract class ModuleHolder {
     /**
      * The function that determines configuration headers for an entry.
      */
-    private final Function<Module, String> headerProcessor;
+    private final Function<M, String> headerProcessor;
 
     /**
      * The function that determines the descriptions for a module's name.
      */
-    private final Function<Class<? extends Module>, String> descriptionProcessor;
+    private final Function<Class<? extends M>, String> descriptionProcessor;
 
     /**
      * The name of the configuration section that contains the module flags
@@ -128,10 +133,10 @@ public abstract class ModuleHolder {
      */
     @Nullable private final String moduleSectionHeader;
 
-    protected <R extends ModuleHolder> ModuleHolder(Builder<R, ? extends Builder<R, ?>> builder)
+    protected <R extends ModuleHolder<M>, B extends Builder<M, R, B>> ModuleHolder(B builder)
             throws QuickStartModuleDiscoveryException {
-
         try {
+            this.baseClass = builder.moduleType;
             this.config = new SystemConfig<>(builder.configurationLoader, builder.loggerProxy, builder.configurationOptionsTransformer);
             this.loggerProxy = builder.loggerProxy;
             this.enabler = builder.enabler;
@@ -162,24 +167,24 @@ public abstract class ModuleHolder {
             Preconditions.checkState(currentPhase == ConstructionPhase.INITALISED);
             currentPhase = ConstructionPhase.DISCOVERING;
 
-            Set<Class<? extends Module>> modules = discoverModules();
-            HashMap<String, ModuleSpec> discovered = Maps.newHashMap();
-            for (Class<? extends Module> s : modules) {
+            Set<Class<? extends M>> modules = discoverModules();
+            HashMap<String, ModuleSpec<M>> discovered = Maps.newHashMap();
+            for (Class<? extends M> s : modules) {
                 // If we have a module annotation, we are golden.
                 String id;
-                ModuleSpec ms;
+                ModuleSpec<M> ms;
                 if (s.isAnnotationPresent(ModuleData.class)) {
                     ModuleData md = s.getAnnotation(ModuleData.class);
                     id = md.id().toLowerCase();
-                    ms = new ModuleSpec(s, md);
+                    ms = new ModuleSpec<>(s, md);
                 } else if (this.requireAnnotation) {
                     loggerProxy.warn(MessageFormat.format("The module class {0} does not have a ModuleData annotation associated with it. "
                             + "It is not being loaded as the module container requires the annotation to be present.", s.getClass().getName()));
                     continue;
                 } else {
-                    id = s.getClass().getName().toLowerCase();
+                    id = s.getName().toLowerCase();
                     loggerProxy.warn(MessageFormat.format("The module {0} does not have a ModuleData annotation associated with it. We're just assuming an ID of {0}.", id));
-                    ms = new ModuleSpec(s, id, id, LoadingStatus.ENABLED, false);
+                    ms = new ModuleSpec<>(s, id, id, LoadingStatus.ENABLED, false);
                 }
 
                 if (discovered.containsKey(id)) {
@@ -193,8 +198,8 @@ public abstract class ModuleHolder {
             resolveDependencyOrder(discovered);
 
             // Modules discovered. Create the Module Config adapter.
-            List<ModuleSpec> moduleSpecList = this.discoveredModules.entrySet().stream().filter(x -> !x.getValue().isMandatory())
-                    .map(Map.Entry::getValue).collect(Collectors.toList());
+            List<ModuleSpec<M>> moduleSpecList =
+                    this.discoveredModules.values().stream().filter(rModuleSpec -> !rModuleSpec.isMandatory()).collect(Collectors.toList());
 
             // Attaches config adapter and loads in the defaults.
             config.attachModulesConfig(moduleSpecList, this.descriptionProcessor, this.moduleSection, this.moduleSectionHeader);
@@ -204,7 +209,7 @@ public abstract class ModuleHolder {
             try {
                 config.getConfigAdapter().getNode().forEach((k, v) -> {
                     try {
-                        ModuleSpec ms = discoveredModules.get(k);
+                        ModuleSpec<M> ms = discoveredModules.get(k);
                         if (ms != null) {
                             ms.setStatus(v);
                         } else {
@@ -228,7 +233,7 @@ public abstract class ModuleHolder {
         }
     }
 
-    private void resolveDependencyOrder(Map<String, ModuleSpec> modules) throws Exception {
+    private void resolveDependencyOrder(Map<String, ModuleSpec<M>> modules) throws Exception {
         // First, get the modules that have no deps.
         processDependencyStep(modules, x -> x.getValue().getDependencies().isEmpty() && x.getValue().getSoftDependencies().isEmpty());
 
@@ -238,9 +243,9 @@ public abstract class ModuleHolder {
         }
     }
 
-    private void processDependencyStep(Map<String, ModuleSpec> modules, Predicate<Map.Entry<String, ModuleSpec>> predicate) throws Exception {
+    private void processDependencyStep(Map<String, ModuleSpec<M>> modules, Predicate<Map.Entry<String, ModuleSpec<M>>> predicate) throws Exception {
         // Filter on the predicate
-        List<Map.Entry<String, ModuleSpec>> modulesToAdd = modules.entrySet().stream().filter(predicate)
+        List<Map.Entry<String, ModuleSpec<M>>> modulesToAdd = modules.entrySet().stream().filter(predicate)
                 .sorted((x, y) -> x.getValue().isMandatory() == y.getValue().isMandatory() ? x.getKey().compareTo(y.getKey()) : Boolean.compare(x.getValue().isMandatory(), y.getValue().isMandatory()))
                 .collect(Collectors.toList());
 
@@ -255,7 +260,7 @@ public abstract class ModuleHolder {
 
     }
 
-    private boolean dependenciesSatisfied(ModuleSpec moduleSpec, Set<String> enabledModules) {
+    private boolean dependenciesSatisfied(ModuleSpec<M> moduleSpec, Set<String> enabledModules) {
         if (moduleSpec.getDependencies().isEmpty()) {
             return true;
         }
@@ -270,7 +275,7 @@ public abstract class ModuleHolder {
         return true;
     }
 
-    protected abstract Set<Class<? extends Module>> discoverModules() throws Exception;
+    protected abstract Set<Class<? extends M>> discoverModules() throws Exception;
 
     /**
      * Gets the current phase of the module loader.
@@ -373,7 +378,11 @@ public abstract class ModuleHolder {
         }
     }
 
-    protected abstract Module getModule(ModuleSpec spec) throws Exception;
+    protected final Class<M> getBaseClass() {
+        return this.baseClass;
+    }
+
+    protected abstract M getModule(ModuleSpec<M> spec) throws Exception;
 
     /**
      * Starts the module construction and enabling phase. This is the final phase for loading the modules.
@@ -396,7 +405,7 @@ public abstract class ModuleHolder {
         Set<String> disabledModules = getModules(ModuleStatusTristate.DISABLE);
         while (!disabledModules.isEmpty()) {
             // Find any modules that have dependencies on disabled modules, and disable them.
-            List<ModuleSpec> toDisable = getModules(ModuleStatusTristate.ENABLE).stream().map(discoveredModules::get)
+            List<ModuleSpec<M>> toDisable = getModules(ModuleStatusTristate.ENABLE).stream().map(discoveredModules::get)
                     .filter(x -> !Collections.disjoint(disabledModules, x.getDependencies())).collect(Collectors.toList());
             if (toDisable.isEmpty()) {
                 break;
@@ -404,7 +413,7 @@ public abstract class ModuleHolder {
 
             if (toDisable.stream().anyMatch(ModuleSpec::isMandatory)) {
                 String s = toDisable.stream().filter(ModuleSpec::isMandatory).map(ModuleSpec::getId).collect(Collectors.joining(", "));
-                Class<? extends Module> m = toDisable.stream().filter(ModuleSpec::isMandatory).findFirst().get().getModuleClass();
+                Class<? extends M> m = toDisable.stream().filter(ModuleSpec::isMandatory).findFirst().get().getModuleClass();
                 throw new QuickStartModuleLoaderException.Construction(m,
                         "Tried to disable mandatory module",
                         new IllegalStateException("Dependency failure, tried to disable a mandatory module (" + s + ")"));
@@ -420,11 +429,11 @@ public abstract class ModuleHolder {
         getModules(ModuleStatusTristate.DISABLE).forEach(k -> discoveredModules.get(k).setPhase(ModulePhase.DISABLED));
 
         // Modules to enable.
-        Map<String, Module> modules = Maps.newConcurrentMap();
+        Map<String, M> modules = Maps.newConcurrentMap();
 
         // Construct them
         for (String s : getModules(ModuleStatusTristate.ENABLE)) {
-            ModuleSpec ms = discoveredModules.get(s);
+            ModuleSpec<M> ms = discoveredModules.get(s);
             try {
                 modules.put(s, getModule(ms));
                 ms.setPhase(ModulePhase.CONSTRUCTED);
@@ -448,9 +457,9 @@ public abstract class ModuleHolder {
         int size = modules.size();
 
         {
-            Iterator<Map.Entry<String, Module>> im = modules.entrySet().iterator();
+            Iterator<Map.Entry<String, M>> im = modules.entrySet().iterator();
             while (im.hasNext()) {
-                Map.Entry<String, Module> module = im.next();
+                Map.Entry<String, M> module = im.next();
                 try {
                     module.getValue().checkExternalDependencies();
                 } catch (MissingDependencyException ex) {
@@ -466,9 +475,9 @@ public abstract class ModuleHolder {
         while (size != modules.size()) {
             // We might need to disable modules.
             size = modules.size();
-            Iterator<Map.Entry<String, Module>> im = modules.entrySet().iterator();
+            Iterator<Map.Entry<String, M>> im = modules.entrySet().iterator();
             while (im.hasNext()) {
-                Map.Entry<String, Module> module = im.next();
+                Map.Entry<String, M> module = im.next();
                 if (!dependenciesSatisfied(this.discoveredModules.get(module.getKey()), getModules(ModuleStatusTristate.ENABLE))) {
                     im.remove();
                     this.loggerProxy.warn("Module " + module.getKey() + " can not be enabled because an external dependency on a module it "
@@ -482,7 +491,7 @@ public abstract class ModuleHolder {
 
         // Enter Config Adapter phase - attaching before enabling so that enable methods can get any associated configurations.
         for (String s : modules.keySet()) {
-            Module m = modules.get(s);
+            M m = modules.get(s);
             try {
                 attachConfig(s, m);
             } catch (Exception e) {
@@ -494,13 +503,13 @@ public abstract class ModuleHolder {
         }
 
         // Enter Enable phase.
-        Map<String, Module> c = new HashMap<>(modules);
+        Map<String, M> c = new HashMap<>(modules);
 
         for (EnablePhase v : EnablePhase.values()) {
             loggerProxy.info(String.format("Starting phase: %s", v.name()));
             v.onStart(this);
             for (String s : c.keySet()) {
-                ModuleSpec ms = discoveredModules.get(s);
+                ModuleSpec<M> ms = discoveredModules.get(s);
 
                 // If the module is errored, then we do not continue.
                 if (ms.getPhase() == ModulePhase.ERRORED) {
@@ -508,7 +517,7 @@ public abstract class ModuleHolder {
                 }
 
                 try {
-                    Module m = modules.get(s);
+                    M m = modules.get(s);
                     v.onModuleAction(this, enabler, m, ms);
                 } catch (Exception construction) {
                     construction.printStackTrace();
@@ -582,7 +591,7 @@ public abstract class ModuleHolder {
 
     }
 
-    private void attachConfig(String name, Module m) throws Exception {
+    private void attachConfig(String name, M m) throws Exception {
         Optional<AbstractConfigAdapter<?>> a = m.getConfigAdapter();
         if (a.isPresent()) {
             config.attachConfigAdapter(name, a.get(), this.headerProcessor.apply(m));
@@ -594,7 +603,8 @@ public abstract class ModuleHolder {
     }
 
     @SuppressWarnings("unchecked")
-    public final <R extends AbstractConfigAdapter<?>> R getConfigAdapterForModule(String module, Class<R> adapterClass) throws NoModuleException, IncorrectAdapterTypeException {
+    public final <C extends AbstractConfigAdapter<?>> C getConfigAdapterForModule(String module,
+            Class<C> adapterClass) throws NoModuleException, IncorrectAdapterTypeException {
         return config.getConfigAdapterForModule(module, adapterClass);
     }
 
@@ -638,8 +648,9 @@ public abstract class ModuleHolder {
     /**
      * Builder class to create a {@link ModuleHolder}
      */
-    public static abstract class Builder<R extends ModuleHolder, T extends Builder<R, T>> {
+    public static abstract class Builder<M extends Module, R extends ModuleHolder<M>, T extends Builder<M, R, T>> {
 
+        protected final Class<M> moduleType;
         protected ConfigurationLoader<? extends ConfigurationNode> configurationLoader;
         protected boolean requireAnnotation = false;
         protected LoggerProxy loggerProxy;
@@ -649,12 +660,21 @@ public abstract class ModuleHolder {
         protected Function<ConfigurationOptions, ConfigurationOptions> configurationOptionsTransformer = x -> x;
         protected ModuleEnabler enabler = ModuleEnabler.SIMPLE_INSTANCE;
         protected boolean doNotMerge = false;
-        @Nullable protected Function<Class<? extends Module>, String> moduleDescriptionHandler = null;
-        @Nullable protected Function<Module, String> moduleConfigurationHeader = null;
+        @Nullable protected Function<Class<? extends M>, String> moduleDescriptionHandler = null;
+        @Nullable protected Function<M, String> moduleConfigurationHeader = null;
         protected String moduleConfigSection = "modules";
         @Nullable protected String moduleDescription = null;
 
         protected abstract T getThis();
+
+        /**
+         * Creates a builder with the given type of {@link Module}.
+         *
+         * @param moduleType The type of module.
+         */
+        public Builder(Class<M> moduleType) {
+            this.moduleType = moduleType;
+        }
 
         /**
          * Sets the {@link ConfigurationLoader} that will handle the module loading.
@@ -775,7 +795,7 @@ public abstract class ModuleHolder {
          * @param handler The {@link Function} to use, or {@code null} otherwise.
          * @return This {@link Builder}, for chaining.
          */
-        public T setModuleDescriptionHandler(@Nullable Function<Class<? extends Module>, String> handler) {
+        public T setModuleDescriptionHandler(@Nullable Function<Class<? extends M>, String> handler) {
             this.moduleDescriptionHandler = handler;
             return getThis();
         }
@@ -790,7 +810,7 @@ public abstract class ModuleHolder {
          * @param header The {@link Function} to use, or {@code null} otherwise.
          * @return This {@link Builder}, for chaining.
          */
-        public T setModuleConfigurationHeader(@Nullable Function<Module, String> header) {
+        public T setModuleConfigurationHeader(@Nullable Function<M, String> header) {
             this.moduleConfigurationHeader = header;
             return getThis();
         }
@@ -857,9 +877,9 @@ public abstract class ModuleHolder {
         DISABLE(k -> !ENABLE.statusPredicate.test(k)),
         ALL(k -> true);
 
-        private final Predicate<Map.Entry<String, ModuleSpec>> statusPredicate;
+        private final Predicate<Map.Entry<String, ? extends ModuleSpec<? extends Module>>> statusPredicate;
 
-        ModuleStatusTristate(Predicate<Map.Entry<String, ModuleSpec>> p) {
+        ModuleStatusTristate(Predicate<Map.Entry<String, ? extends ModuleSpec<? extends Module>>> p) {
             statusPredicate = p;
         }
     }
@@ -894,7 +914,7 @@ public abstract class ModuleHolder {
                 enabler.enableModule(module);
                 ms.setPhase(ModulePhase.ENABLED);
                 if (module instanceof Module.RuntimeDisableable) {
-                    moduleContainer.enabledDisableableModules.put(ms.getId(), (Module.RuntimeDisableable)module);
+                    moduleContainer.enabledDisableableModules.put(ms.getId(), module);
                 }
             }
         },

@@ -16,9 +16,9 @@ import java.util.List;
 /**
  * Internal specification of a module.
  */
-public final class ModuleSpec {
+public final class ModuleSpec<M extends Module> {
 
-    private final Class<? extends Module> moduleClass;
+    private final Class<? extends M> moduleClass;
     private final List<String> softDeps;
     private final List<String> deps;
     private final String name;
@@ -28,15 +28,21 @@ public final class ModuleSpec {
     private final boolean isMandatory;
     private ModulePhase phase = ModulePhase.DISCOVERED;
 
-    ModuleSpec(Class<? extends Module> moduleClass, ModuleData data) {
+    ModuleSpec(Class<? extends M> moduleClass, ModuleData data) {
         this(moduleClass, data.id(), data.name(), data.status(), data.isRequired(), Arrays.asList(data.softDependencies()), Arrays.asList(data.dependencies()));
     }
 
-    ModuleSpec(Class<? extends Module> moduleClass, String id, String name, LoadingStatus status, boolean isMandatory) {
+    ModuleSpec(Class<? extends M> moduleClass, String id, String name, LoadingStatus status, boolean isMandatory) {
         this(moduleClass, id, name, status, isMandatory, Lists.newArrayList(), Lists.newArrayList());
     }
 
-    ModuleSpec(Class<? extends Module> moduleClass, String id, String name, LoadingStatus status, boolean isMandatory, List<String> softDeps, List<String> deps) {
+    ModuleSpec(Class<? extends M> moduleClass,
+            String id,
+            String name,
+            LoadingStatus status,
+            boolean isMandatory,
+            List<String> softDeps,
+            List<String> deps) {
         Preconditions.checkNotNull(moduleClass);
         Preconditions.checkNotNull(id);
         Preconditions.checkNotNull(name);
@@ -59,7 +65,7 @@ public final class ModuleSpec {
      *
      * @return The {@link Class}
      */
-    public Class<? extends Module> getModuleClass() {
+    public Class<? extends M> getModuleClass() {
         return moduleClass;
     }
 

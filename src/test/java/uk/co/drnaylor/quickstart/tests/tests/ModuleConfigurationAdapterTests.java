@@ -7,11 +7,11 @@ package uk.co.drnaylor.quickstart.tests.tests;
 import com.google.common.collect.Maps;
 import ninja.leaping.configurate.ConfigurationNode;
 import ninja.leaping.configurate.ConfigurationOptions;
-import ninja.leaping.configurate.loader.ConfigurationLoader;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import uk.co.drnaylor.quickstart.DefaultLogger;
+import uk.co.drnaylor.quickstart.Module;
 import uk.co.drnaylor.quickstart.SystemConfig;
 import uk.co.drnaylor.quickstart.config.ModulesConfigAdapter;
 import uk.co.drnaylor.quickstart.enums.LoadingStatus;
@@ -24,7 +24,7 @@ import java.util.function.Function;
 
 public class ModuleConfigurationAdapterTests extends FakeLoaderTests {
 
-    private SystemConfig<ConfigurationNode, ConfigurationLoader<ConfigurationNode>> config;
+    private SystemConfig<ConfigurationNode, Module> config;
 
     @Before
     @Override
@@ -34,7 +34,7 @@ public class ModuleConfigurationAdapterTests extends FakeLoaderTests {
 
         Constructor<?> ctor = SystemConfig.class.getDeclaredConstructors()[0];
         ctor.setAccessible(true);
-        config = (SystemConfig<ConfigurationNode, ConfigurationLoader<ConfigurationNode>>) ctor.newInstance(
+        config = (SystemConfig<ConfigurationNode, Module>) ctor.newInstance(
                 loader,
                 DefaultLogger.INSTANCE,
                 (Function<ConfigurationOptions, ConfigurationOptions>) configurationOptions -> configurationOptions);

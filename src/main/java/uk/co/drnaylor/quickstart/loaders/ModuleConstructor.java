@@ -10,14 +10,14 @@ import uk.co.drnaylor.quickstart.exceptions.QuickStartModuleLoaderException;
 /**
  * Provides information on how to construct and enable the module classes.
  */
-public interface ModuleConstructor {
+public interface ModuleConstructor<R extends Module> {
 
     /**
      * Constructs the supplied module.
      *
      * @param moduleClass The {@link Class} of the module to construct.
-     * @return The {@link Module}
+     * @return The {@link R}
      * @throws QuickStartModuleLoaderException.Construction if the module could not be constructed.
      */
-    Module constructModule(Class<? extends Module> moduleClass) throws QuickStartModuleLoaderException.Construction;
+    R constructModule(Class<? extends R> moduleClass) throws QuickStartModuleLoaderException.Construction;
 }

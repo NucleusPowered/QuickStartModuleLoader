@@ -38,14 +38,18 @@ public class FakeLoaderTests {
         when(loader.getDefaultOptions()).thenReturn(ConfigurationOptions.defaults());
     }
 
-    protected ModuleHolder getContainer(String p) throws QuickStartModuleDiscoveryException {
-        ModuleHolder container = DiscoveryModuleHolder.builder().setConfigurationLoader(loader).setPackageToScan(p).build();
+    protected ModuleHolder<Module> getContainer(String p) throws QuickStartModuleDiscoveryException {
+        ModuleHolder<Module> container = DiscoveryModuleHolder
+                .builder(Module.class)
+                .setConfigurationLoader(loader)
+                .setPackageToScan(p)
+                .build();
         container.startDiscover();
         return container;
     }
 
-    protected ModuleHolder getProvidedContainer(Module... modules) throws Exception {
-        ModuleHolder container = ProvidedModuleHolder.builder().setConfigurationLoader(loader)
+    protected ModuleHolder<Module> getProvidedContainer(Module... modules) throws Exception {
+        ModuleHolder<Module> container = ProvidedModuleHolder.builder(Module.class).setConfigurationLoader(loader)
                 .setNoMergeIfPresent(true).setModules(Arrays.stream(modules).collect(Collectors.toSet())).build();
         container.startDiscover();
         return container;

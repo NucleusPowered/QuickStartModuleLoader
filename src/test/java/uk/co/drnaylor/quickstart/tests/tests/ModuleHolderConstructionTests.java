@@ -10,6 +10,7 @@ import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
+import uk.co.drnaylor.quickstart.Module;
 import uk.co.drnaylor.quickstart.ModuleHolder;
 import uk.co.drnaylor.quickstart.config.ModulesConfigAdapter;
 import uk.co.drnaylor.quickstart.config.SimpleNodeConfigAdapter;
@@ -64,7 +65,7 @@ public class ModuleHolderConstructionTests extends FakeLoaderTests {
     @Test
     public void testThatConfigAdaptersGetRegisteredOnConstruction() throws Exception {
         // When we load these modules...
-        ModuleHolder mc = getContainer("uk.co.drnaylor.quickstart.tests.modules.adapterstest");
+        ModuleHolder<Module> mc = getContainer("uk.co.drnaylor.quickstart.tests.modules.adapterstest");
         mc.loadModules(true);
 
         // ...test that we get three config adapters.
@@ -80,7 +81,7 @@ public class ModuleHolderConstructionTests extends FakeLoaderTests {
     @Test
     public void testThatModulesAreLoadedAsExpected() throws Exception {
         // When we load these modules...
-        ModuleHolder mc = getContainer("uk.co.drnaylor.quickstart.tests.modules.modulestates");
+        ModuleHolder<Module> mc = getContainer("uk.co.drnaylor.quickstart.tests.modules.modulestates");
         mc.loadModules(true);
 
         Set<String> ss = mc.getModules(ModuleHolder.ModuleStatusTristate.ENABLE);
@@ -92,7 +93,7 @@ public class ModuleHolderConstructionTests extends FakeLoaderTests {
     @Test
     public void testThatOneModuleFailingDoesntKillWholeLoader() throws Exception {
         // When we load these modules...
-        ModuleHolder mc = getContainer("uk.co.drnaylor.quickstart.tests.modules.exceptions.onefail");
+        ModuleHolder<Module> mc = getContainer("uk.co.drnaylor.quickstart.tests.modules.exceptions.onefail");
         mc.loadModules(false);
 
         Set<String> ss = mc.getModules(ModuleHolder.ModuleStatusTristate.ENABLE);

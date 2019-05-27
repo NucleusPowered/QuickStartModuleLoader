@@ -24,22 +24,25 @@ import javax.annotation.Nullable;
 /**
  * Defines the configuration file that loads the modules, and any {@link AbstractConfigAdapter}s.
  */
-public final class SystemConfig<N extends ConfigurationNode, T extends ConfigurationLoader<N>> extends AbstractAdaptableConfig<N, T> {
+public final class SystemConfig<N extends ConfigurationNode, M extends Module> extends AbstractAdaptableConfig<N> {
 
     private final LoggerProxy proxy;
     private ModulesConfigAdapter configAdapter;
 
-    SystemConfig(T loader, LoggerProxy proxy, Function<ConfigurationOptions, ConfigurationOptions> optionsTransformer) throws IOException {
+    SystemConfig(ConfigurationLoader<N> loader,
+            LoggerProxy proxy,
+            Function<ConfigurationOptions, ConfigurationOptions> optionsTransformer) throws IOException {
         super(loader, () -> loader.createEmptyNode(optionsTransformer.apply(loader.getDefaultOptions())), optionsTransformer);
         this.proxy = proxy;
     }
 
-    void attachModulesConfig(List<ModuleSpec> defaults, Function<Class<? extends Module>, String> description, String modulesNode,
+    void attachModulesConfig(List<ModuleSpec<M>> defaults, Function<Class<? extends M>, String> description, String modulesNode,
             @Nullable String descriptionForModules) throws IOException {
         Preconditions.checkNotNull(defaults);
         Preconditions.checkState(configAdapter == null);
 
-        Map<String, LoadingStatus> msls = defaults.stream().collect(Collectors.toMap(k -> k.getId().toLowerCase(), ModuleSpec::getStatus));
+        Map<String, LoadingStatus> msls = defaults.stream()
+                .collect(Collectors.toMap(k -> k.getId().toLowerCase(), ModuleSpec::getStatus));
         Map<String, String> msdesc = defaults.stream()
                 .collect(Collectors.toMap(k -> k.getId().toLowerCase(), k -> description.apply(k.getModuleClass())));
 

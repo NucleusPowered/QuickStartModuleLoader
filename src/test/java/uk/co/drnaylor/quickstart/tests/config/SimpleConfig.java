@@ -13,7 +13,7 @@ import java.io.IOException;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
-public class SimpleConfig extends AbstractAdaptableConfig<ConfigurationNode, ConfigurationLoader<ConfigurationNode>> {
+public class SimpleConfig extends AbstractAdaptableConfig<ConfigurationNode> {
 
     public SimpleConfig(ConfigurationLoader<ConfigurationNode> loader,
                         Supplier<ConfigurationNode> nodeCreator,

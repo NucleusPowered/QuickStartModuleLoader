@@ -7,28 +7,17 @@ package uk.co.drnaylor.quickstart.holders;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
-import ninja.leaping.configurate.ConfigurationNode;
-import ninja.leaping.configurate.ConfigurationOptions;
-import ninja.leaping.configurate.loader.ConfigurationLoader;
-import uk.co.drnaylor.quickstart.LoggerProxy;
 import uk.co.drnaylor.quickstart.Module;
 import uk.co.drnaylor.quickstart.ModuleHolder;
 import uk.co.drnaylor.quickstart.ModuleSpec;
-import uk.co.drnaylor.quickstart.Procedure;
-import uk.co.drnaylor.quickstart.annotations.ModuleData;
-import uk.co.drnaylor.quickstart.config.NoMergeIfPresent;
 import uk.co.drnaylor.quickstart.exceptions.QuickStartModuleDiscoveryException;
-import uk.co.drnaylor.quickstart.loaders.ModuleConstructor;
-import uk.co.drnaylor.quickstart.loaders.ModuleEnabler;
-import uk.co.drnaylor.quickstart.loaders.SimpleModuleConstructor;
 import uk.co.drnaylor.quickstart.holders.discoverystrategies.Strategy;
+import uk.co.drnaylor.quickstart.loaders.ModuleConstructor;
+import uk.co.drnaylor.quickstart.loaders.SimpleModuleConstructor;
 import uk.co.drnaylor.quickstart.util.ThrownBiFunction;
 
 import java.util.Set;
-import java.util.function.Function;
 import java.util.stream.Collectors;
-
-import javax.annotation.Nullable;
 
 /**
  * The Discovery module container tries to load and instantiate modules that are
@@ -38,16 +27,21 @@ import javax.annotation.Nullable;
  *
  * <p>All classes that were discovered by the module container are available
  * in the container, to save users from multiple classpath scans.</p>
+ *
+ * @param <M> The type of {@link Module} that this contains.
  */
-public final class DiscoveryModuleHolder extends ModuleHolder {
+public final class DiscoveryModuleHolder<M extends Module> extends ModuleHolder<M> {
 
     /**
      * Gets a builder to create a {@link DiscoveryModuleHolder}
      *
+     * @param moduleClass The {@link Class} of type {@link M} that represents the type of module
+     *      that this holder will contain.
+     * @param <M> The type of module.
      * @return A {@link DiscoveryModuleHolder.Builder} for building a {@link DiscoveryModuleHolder}
      */
-    public static DiscoveryModuleHolder.Builder builder() {
-        return new DiscoveryModuleHolder.Builder();
+    public static <M extends Module> DiscoveryModuleHolder.Builder<M> builder(Class<M> moduleClass) {
+        return new DiscoveryModuleHolder.Builder<>(moduleClass);
     }
 
     /**
@@ -58,7 +52,7 @@ public final class DiscoveryModuleHolder extends ModuleHolder {
     /**
      * Provides the methods to use to construct the module.
      */
-    private final ModuleConstructor constructor;
+    private final ModuleConstructor<M> constructor;
 
     /**
      * The root of the package to scan.
@@ -79,9 +73,8 @@ public final class DiscoveryModuleHolder extends ModuleHolder {
      * Constructs a {@link ModuleHolder} and starts discovery of the modules.
      *
      * @param builder The builder to build this from.
-     * @param <N> The type of {@link ConfigurationNode} to use.
      */
-    private <N extends ConfigurationNode> DiscoveryModuleHolder(DiscoveryModuleHolder.Builder builder) throws QuickStartModuleDiscoveryException {
+    private DiscoveryModuleHolder(DiscoveryModuleHolder.Builder<M> builder) throws QuickStartModuleDiscoveryException {
         super(builder);
         this.classLoader = builder.classLoader;
         this.constructor = builder.constructor;
@@ -93,12 +86,12 @@ public final class DiscoveryModuleHolder extends ModuleHolder {
      * Starts discovery of modules.
      */
     @Override
-    protected Set<Class<? extends Module>> discoverModules() throws Exception {
+    protected Set<Class<? extends M>> discoverModules() throws Exception {
         // Get the modules out.
         loadedClasses.addAll(this.strategy.discover(packageLocation, classLoader));
-
-        Set<Class<? extends Module>> modules = loadedClasses.stream().filter(Module.class::isAssignableFrom)
-                .map(x -> (Class<? extends Module>)x.asSubclass(Module.class)).collect(Collectors.toSet());
+        final Class<M> basicClass = getBaseClass();
+        Set<Class<? extends M>> modules = loadedClasses.stream().filter(basicClass::isAssignableFrom)
+                .map(x -> (Class<? extends M>) x.asSubclass(basicClass)).collect(Collectors.toSet());
 
         if (modules.isEmpty()) {
             throw new QuickStartModuleDiscoveryException("No modules were found", null);
@@ -108,10 +101,9 @@ public final class DiscoveryModuleHolder extends ModuleHolder {
     }
 
     @Override
-    protected Module getModule(ModuleSpec spec) throws Exception {
+    protected M getModule(ModuleSpec<M> spec) throws Exception {
         return constructor.constructModule(spec.getModuleClass());
     }
-
 
     /**
      * Gets the {@link Class}es that were scanned during the module discovery phase.
@@ -122,11 +114,20 @@ public final class DiscoveryModuleHolder extends ModuleHolder {
         return ImmutableSet.copyOf(this.loadedClasses);
     }
 
-    public final static class Builder extends ModuleHolder.Builder<DiscoveryModuleHolder, Builder> {
+    public final static class Builder<M extends Module> extends ModuleHolder.Builder<M, DiscoveryModuleHolder<M>, Builder<M>> {
         private String packageToScan;
-        private ModuleConstructor constructor = SimpleModuleConstructor.INSTANCE;
+        private ModuleConstructor<M> constructor = new SimpleModuleConstructor<>();
         private ClassLoader classLoader;
         private Strategy strategy = Strategy.DEFAULT;
+
+        /**
+         * Creates a builder with the given type of {@link Module}.
+         *
+         * @param moduleType The type of module.
+         */
+        Builder(Class<M> moduleType) {
+            super(moduleType);
+        }
 
         /**
          * Sets the root package name to scan.
@@ -135,7 +136,7 @@ public final class DiscoveryModuleHolder extends ModuleHolder {
          *                      that package and all subpackages, such as <code>uk.co.drnaylor.quickstart.config</code>)
          * @return This {@link ModuleHolder.Builder}, for chaining.
          */
-        public Builder setPackageToScan(String packageToScan) {
+        public Builder<M> setPackageToScan(String packageToScan) {
             this.packageToScan = packageToScan;
             return this;
         }
@@ -146,7 +147,7 @@ public final class DiscoveryModuleHolder extends ModuleHolder {
          * @param constructor The constructor to use
          * @return This {@link ModuleHolder.Builder}, for chaining.
          */
-        public Builder setConstructor(ModuleConstructor constructor) {
+        public Builder<M> setConstructor(ModuleConstructor<M> constructor) {
             this.constructor = constructor;
             return this;
         }
@@ -157,7 +158,7 @@ public final class DiscoveryModuleHolder extends ModuleHolder {
          * @param classLoader The class loader to use.
          * @return This {@link ModuleHolder.Builder}, for chaining.
          */
-        public Builder setClassLoader(ClassLoader classLoader) {
+        public Builder<M> setClassLoader(ClassLoader classLoader) {
             this.classLoader = classLoader;
             return this;
         }
@@ -174,7 +175,7 @@ public final class DiscoveryModuleHolder extends ModuleHolder {
          * @deprecated Use {@link #setStrategy(Strategy)} instead.
          */
         @Deprecated
-        public Builder setDiscoveryStrategy(ThrownBiFunction<String, ClassLoader, Set<Class<?>>, Exception> strategy) {
+        public Builder<M> setDiscoveryStrategy(ThrownBiFunction<String, ClassLoader, Set<Class<?>>, Exception> strategy) {
             Preconditions.checkNotNull(strategy);
             this.strategy = strategy::apply;
             return this;
@@ -190,13 +191,13 @@ public final class DiscoveryModuleHolder extends ModuleHolder {
          * @param strategy The strategy to use
          * @return This {@link ModuleHolder.Builder}, for chaining.
          */
-        public Builder setStrategy(Strategy strategy) {
+        public Builder<M> setStrategy(Strategy strategy) {
             this.strategy = Preconditions.checkNotNull(strategy);
             return this;
         }
 
         @Override
-        protected Builder getThis() {
+        protected Builder<M> getThis() {
             return this;
         }
 
@@ -206,11 +207,11 @@ public final class DiscoveryModuleHolder extends ModuleHolder {
          * @return The {@link ModuleHolder}.
          * @throws QuickStartModuleDiscoveryException if the configuration loader cannot load data from the file.
          */
-        public DiscoveryModuleHolder build() throws QuickStartModuleDiscoveryException {
+        public DiscoveryModuleHolder<M> build() throws QuickStartModuleDiscoveryException {
             Preconditions.checkNotNull(packageToScan);
 
             if (constructor == null) {
-                constructor = SimpleModuleConstructor.INSTANCE;
+                constructor = new SimpleModuleConstructor<>();
             }
 
             if (classLoader == null) {
@@ -218,7 +219,7 @@ public final class DiscoveryModuleHolder extends ModuleHolder {
             }
 
             checkBuild();
-            return new DiscoveryModuleHolder(this);
+            return new DiscoveryModuleHolder<>(this);
         }
     }
 

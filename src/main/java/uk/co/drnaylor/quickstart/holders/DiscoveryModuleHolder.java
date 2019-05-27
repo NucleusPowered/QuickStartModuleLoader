@@ -2,7 +2,7 @@
  * This file is part of QuickStart Module Loader, licensed under the MIT License (MIT). See the LICENSE.txt file
  * at the root of this project for more details.
  */
-package uk.co.drnaylor.quickstart.modulecontainers;
+package uk.co.drnaylor.quickstart.holders;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSet;
@@ -12,7 +12,7 @@ import ninja.leaping.configurate.ConfigurationOptions;
 import ninja.leaping.configurate.loader.ConfigurationLoader;
 import uk.co.drnaylor.quickstart.LoggerProxy;
 import uk.co.drnaylor.quickstart.Module;
-import uk.co.drnaylor.quickstart.ModuleContainer;
+import uk.co.drnaylor.quickstart.ModuleHolder;
 import uk.co.drnaylor.quickstart.ModuleSpec;
 import uk.co.drnaylor.quickstart.Procedure;
 import uk.co.drnaylor.quickstart.annotations.ModuleData;
@@ -21,7 +21,7 @@ import uk.co.drnaylor.quickstart.exceptions.QuickStartModuleDiscoveryException;
 import uk.co.drnaylor.quickstart.loaders.ModuleConstructor;
 import uk.co.drnaylor.quickstart.loaders.ModuleEnabler;
 import uk.co.drnaylor.quickstart.loaders.SimpleModuleConstructor;
-import uk.co.drnaylor.quickstart.modulecontainers.discoverystrategies.Strategy;
+import uk.co.drnaylor.quickstart.holders.discoverystrategies.Strategy;
 import uk.co.drnaylor.quickstart.util.ThrownBiFunction;
 
 import java.util.Set;
@@ -39,15 +39,15 @@ import javax.annotation.Nullable;
  * <p>All classes that were discovered by the module container are available
  * in the container, to save users from multiple classpath scans.</p>
  */
-public final class DiscoveryModuleContainer extends ModuleContainer {
+public final class DiscoveryModuleHolder extends ModuleHolder {
 
     /**
-     * Gets a builder to create a {@link DiscoveryModuleContainer}
+     * Gets a builder to create a {@link DiscoveryModuleHolder}
      *
-     * @return A {@link DiscoveryModuleContainer.Builder} for building a {@link DiscoveryModuleContainer}
+     * @return A {@link DiscoveryModuleHolder.Builder} for building a {@link DiscoveryModuleHolder}
      */
-    public static DiscoveryModuleContainer.Builder builder() {
-        return new DiscoveryModuleContainer.Builder();
+    public static DiscoveryModuleHolder.Builder builder() {
+        return new DiscoveryModuleHolder.Builder();
     }
 
     /**
@@ -76,50 +76,17 @@ public final class DiscoveryModuleContainer extends ModuleContainer {
     private final Strategy strategy;
 
     /**
-     * Constructs a {@link ModuleContainer} and starts discovery of the modules.
+     * Constructs a {@link ModuleHolder} and starts discovery of the modules.
      *
-     * @param configurationLoader The {@link ConfigurationLoader} that contains details of whether the modules should be enabled or not.
-     * @param loader              The {@link ClassLoader} that contains the classpath in which the modules are located.
-     * @param packageBase         The root name of the package to scan for modules.
-     * @param constructor         The {@link ModuleConstructor} that contains the logic to construct modules.
-     * @param enabler             The {@link ModuleEnabler} that contains the logic to enable modules.
-     * @param loggerProxy         The {@link LoggerProxy} that contains methods to send messages to the logger, or any other source.
-     * @param onPreEnable         The {@link Procedure} to run on pre enable, before modules are pre-enabled.
-     * @param onEnable            The {@link Procedure} to run on enable, before modules are pre-enabled.
-     * @param onPostEnable        The {@link Procedure} to run on post enable, before modules are pre-enabled.
-     * @param function            The {@link Function} that transforms the {@link ConfigurationOptions}.
-     * @param requiresAnnotation  Whether modules require a {@link ModuleData} annotation.
-     * @param processDoNotMerge   Whether module configs will have {@link NoMergeIfPresent} annotations processed.
-     * @param moduleSection       The name of the section that contains the module enable/disable switches.
-     * @param moduleSectionHeader The comment header for the "module" section
-     * @param strategy            The strategy to use to get classes on the classpath
-     *
-     * @throws QuickStartModuleDiscoveryException if there is an error starting the Module Container.
+     * @param builder The builder to build this from.
+     * @param <N> The type of {@link ConfigurationNode} to use.
      */
-    private <N extends ConfigurationNode> DiscoveryModuleContainer(
-            ConfigurationLoader<N> configurationLoader,
-            ClassLoader loader,
-            String packageBase,
-            ModuleConstructor constructor,
-            ModuleEnabler enabler,
-            LoggerProxy loggerProxy,
-            Procedure onPreEnable,
-            Procedure onEnable,
-            Procedure onPostEnable,
-            Function<ConfigurationOptions, ConfigurationOptions> function,
-            boolean requiresAnnotation,
-            boolean processDoNotMerge,
-            @Nullable Function<Module, String> headerProcessor,
-            @Nullable Function<Class<? extends Module>, String> descriptionProcessor,
-            String moduleSection,
-            @Nullable String moduleSectionHeader,
-            Strategy strategy) throws QuickStartModuleDiscoveryException {
-        super(configurationLoader, loggerProxy, enabler, onPreEnable, onEnable, onPostEnable, function, requiresAnnotation, processDoNotMerge,
-                headerProcessor, descriptionProcessor, moduleSection, moduleSectionHeader);
-        this.classLoader = loader;
-        this.constructor = constructor;
-        this.packageLocation = packageBase;
-        this.strategy = strategy;
+    private <N extends ConfigurationNode> DiscoveryModuleHolder(DiscoveryModuleHolder.Builder builder) throws QuickStartModuleDiscoveryException {
+        super(builder);
+        this.classLoader = builder.classLoader;
+        this.constructor = builder.constructor;
+        this.packageLocation = builder.packageToScan;
+        this.strategy = builder.strategy;
     }
 
     /**
@@ -155,7 +122,7 @@ public final class DiscoveryModuleContainer extends ModuleContainer {
         return ImmutableSet.copyOf(this.loadedClasses);
     }
 
-    public final static class Builder extends ModuleContainer.Builder<DiscoveryModuleContainer, Builder> {
+    public final static class Builder extends ModuleHolder.Builder<DiscoveryModuleHolder, Builder> {
         private String packageToScan;
         private ModuleConstructor constructor = SimpleModuleConstructor.INSTANCE;
         private ClassLoader classLoader;
@@ -166,7 +133,7 @@ public final class DiscoveryModuleContainer extends ModuleContainer {
          *
          * @param packageToScan The root of the package (for example, <code>uk.co.drnaylor.quickstart</code> will scan
          *                      that package and all subpackages, such as <code>uk.co.drnaylor.quickstart.config</code>)
-         * @return This {@link ModuleContainer.Builder}, for chaining.
+         * @return This {@link ModuleHolder.Builder}, for chaining.
          */
         public Builder setPackageToScan(String packageToScan) {
             this.packageToScan = packageToScan;
@@ -177,7 +144,7 @@ public final class DiscoveryModuleContainer extends ModuleContainer {
          * Sets the {@link ModuleConstructor} to use when building the module objects.
          *
          * @param constructor The constructor to use
-         * @return This {@link ModuleContainer.Builder}, for chaining.
+         * @return This {@link ModuleHolder.Builder}, for chaining.
          */
         public Builder setConstructor(ModuleConstructor constructor) {
             this.constructor = constructor;
@@ -188,7 +155,7 @@ public final class DiscoveryModuleContainer extends ModuleContainer {
          * Sets the {@link ClassLoader} to use when scanning the classpath.
          *
          * @param classLoader The class loader to use.
-         * @return This {@link ModuleContainer.Builder}, for chaining.
+         * @return This {@link ModuleHolder.Builder}, for chaining.
          */
         public Builder setClassLoader(ClassLoader classLoader) {
             this.classLoader = classLoader;
@@ -203,7 +170,7 @@ public final class DiscoveryModuleContainer extends ModuleContainer {
          * {@link Class}es.</p>
          *
          * @param strategy The strategy to use
-         * @return This {@link ModuleContainer.Builder}, for chaining.
+         * @return This {@link ModuleHolder.Builder}, for chaining.
          * @deprecated Use {@link #setStrategy(Strategy)} instead.
          */
         @Deprecated
@@ -221,7 +188,7 @@ public final class DiscoveryModuleContainer extends ModuleContainer {
          * {@link Class}es.</p>
          *
          * @param strategy The strategy to use
-         * @return This {@link ModuleContainer.Builder}, for chaining.
+         * @return This {@link ModuleHolder.Builder}, for chaining.
          */
         public Builder setStrategy(Strategy strategy) {
             this.strategy = Preconditions.checkNotNull(strategy);
@@ -234,12 +201,12 @@ public final class DiscoveryModuleContainer extends ModuleContainer {
         }
 
         /**
-         * Builds a {@link ModuleContainer}.
+         * Builds a {@link ModuleHolder}.
          *
-         * @return The {@link ModuleContainer}.
+         * @return The {@link ModuleHolder}.
          * @throws QuickStartModuleDiscoveryException if the configuration loader cannot load data from the file.
          */
-        public DiscoveryModuleContainer build() throws QuickStartModuleDiscoveryException {
+        public DiscoveryModuleHolder build() throws QuickStartModuleDiscoveryException {
             Preconditions.checkNotNull(packageToScan);
 
             if (constructor == null) {
@@ -251,9 +218,7 @@ public final class DiscoveryModuleContainer extends ModuleContainer {
             }
 
             checkBuild();
-            return new DiscoveryModuleContainer(configurationLoader, classLoader, packageToScan, constructor, enabler, loggerProxy,
-                    onPreEnable, onEnable, onPostEnable, configurationOptionsTransformer, requireAnnotation, doNotMerge,
-                    moduleConfigurationHeader, moduleDescriptionHandler, moduleConfigSection, moduleDescription, strategy);
+            return new DiscoveryModuleHolder(this);
         }
     }
 

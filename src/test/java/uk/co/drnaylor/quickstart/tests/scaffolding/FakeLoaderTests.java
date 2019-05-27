@@ -14,10 +14,10 @@ import ninja.leaping.configurate.SimpleConfigurationNode;
 import ninja.leaping.configurate.loader.ConfigurationLoader;
 import org.junit.Before;
 import uk.co.drnaylor.quickstart.Module;
-import uk.co.drnaylor.quickstart.ModuleContainer;
+import uk.co.drnaylor.quickstart.ModuleHolder;
 import uk.co.drnaylor.quickstart.exceptions.QuickStartModuleDiscoveryException;
-import uk.co.drnaylor.quickstart.modulecontainers.DiscoveryModuleContainer;
-import uk.co.drnaylor.quickstart.modulecontainers.ProvidedModuleContainer;
+import uk.co.drnaylor.quickstart.holders.DiscoveryModuleHolder;
+import uk.co.drnaylor.quickstart.holders.ProvidedModuleHolder;
 
 import java.util.Arrays;
 import java.util.stream.Collectors;
@@ -38,14 +38,14 @@ public class FakeLoaderTests {
         when(loader.getDefaultOptions()).thenReturn(ConfigurationOptions.defaults());
     }
 
-    protected ModuleContainer getContainer(String p) throws QuickStartModuleDiscoveryException {
-        ModuleContainer container = DiscoveryModuleContainer.builder().setConfigurationLoader(loader).setPackageToScan(p).build();
+    protected ModuleHolder getContainer(String p) throws QuickStartModuleDiscoveryException {
+        ModuleHolder container = DiscoveryModuleHolder.builder().setConfigurationLoader(loader).setPackageToScan(p).build();
         container.startDiscover();
         return container;
     }
 
-    protected ModuleContainer getProvidedContainer(Module... modules) throws Exception {
-        ModuleContainer container = ProvidedModuleContainer.builder().setConfigurationLoader(loader)
+    protected ModuleHolder getProvidedContainer(Module... modules) throws Exception {
+        ModuleHolder container = ProvidedModuleHolder.builder().setConfigurationLoader(loader)
                 .setNoMergeIfPresent(true).setModules(Arrays.stream(modules).collect(Collectors.toSet())).build();
         container.startDiscover();
         return container;

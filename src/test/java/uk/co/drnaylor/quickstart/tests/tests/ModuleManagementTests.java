@@ -7,14 +7,14 @@ package uk.co.drnaylor.quickstart.tests.tests;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import uk.co.drnaylor.quickstart.ModuleContainer;
+import uk.co.drnaylor.quickstart.ModuleHolder;
 import uk.co.drnaylor.quickstart.config.ModulesConfigAdapter;
 import uk.co.drnaylor.quickstart.exceptions.UndisableableModuleException;
 import uk.co.drnaylor.quickstart.tests.scaffolding.FakeLoaderTests;
 
 public class ModuleManagementTests extends FakeLoaderTests {
 
-    private ModuleContainer mc;
+    private ModuleHolder mc;
 
     @Before
     @Override
@@ -89,13 +89,13 @@ public class ModuleManagementTests extends FakeLoaderTests {
 
     private void checkEnabled(String... ids) throws Exception {
         for (String c : ids) {
-            Assert.assertTrue(mc.getModules(ModuleContainer.ModuleStatusTristate.ENABLE).contains(c));
+            Assert.assertTrue(mc.getModules(ModuleHolder.ModuleStatusTristate.ENABLE).contains(c));
         }
     }
 
     private void checkDisabled(String... ids) throws Exception {
         for (String c : ids) {
-            Assert.assertFalse(mc.getModules(ModuleContainer.ModuleStatusTristate.ENABLE).contains(c));
+            Assert.assertFalse(mc.getModules(ModuleHolder.ModuleStatusTristate.ENABLE).contains(c));
         }
     }
 }

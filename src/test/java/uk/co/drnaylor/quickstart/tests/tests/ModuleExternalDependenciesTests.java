@@ -6,7 +6,7 @@ package uk.co.drnaylor.quickstart.tests.tests;
 
 import org.junit.Assert;
 import org.junit.Test;
-import uk.co.drnaylor.quickstart.ModuleContainer;
+import uk.co.drnaylor.quickstart.ModuleHolder;
 import uk.co.drnaylor.quickstart.tests.scaffolding.FakeLoaderTests;
 
 public class ModuleExternalDependenciesTests extends FakeLoaderTests {
@@ -16,18 +16,18 @@ public class ModuleExternalDependenciesTests extends FakeLoaderTests {
 
     @Test
     public void testModuleWithNoDepsFailsToLoadWhenExternalDepIsNotFound() throws Exception {
-        ModuleContainer mc = getContainer(edtsimple);
+        ModuleHolder mc = getContainer(edtsimple);
         mc.loadModules(true);
-        Assert.assertTrue(mc.getModules(ModuleContainer.ModuleStatusTristate.ENABLE).size() == 2);
-        Assert.assertTrue(mc.getModules(ModuleContainer.ModuleStatusTristate.DISABLE).size() == 1);
+        Assert.assertTrue(mc.getModules(ModuleHolder.ModuleStatusTristate.ENABLE).size() == 2);
+        Assert.assertTrue(mc.getModules(ModuleHolder.ModuleStatusTristate.DISABLE).size() == 1);
     }
 
     @Test
     public void testModuleWithDepsFailsToLoadAndRecalculatesWhenExternalDepIsNotFound() throws Exception {
-        ModuleContainer mc = getContainer(edtcomplex);
+        ModuleHolder mc = getContainer(edtcomplex);
         mc.loadModules(true);
-        Assert.assertTrue(mc.getModules(ModuleContainer.ModuleStatusTristate.ENABLE).size() == 1);
-        Assert.assertTrue(mc.getModules(ModuleContainer.ModuleStatusTristate.DISABLE).size() == 2);
+        Assert.assertTrue(mc.getModules(ModuleHolder.ModuleStatusTristate.ENABLE).size() == 1);
+        Assert.assertTrue(mc.getModules(ModuleHolder.ModuleStatusTristate.DISABLE).size() == 2);
     }
 
 }

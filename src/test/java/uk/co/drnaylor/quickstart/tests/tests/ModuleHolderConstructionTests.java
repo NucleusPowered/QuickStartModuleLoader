@@ -10,7 +10,7 @@ import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
-import uk.co.drnaylor.quickstart.ModuleContainer;
+import uk.co.drnaylor.quickstart.ModuleHolder;
 import uk.co.drnaylor.quickstart.config.ModulesConfigAdapter;
 import uk.co.drnaylor.quickstart.config.SimpleNodeConfigAdapter;
 import uk.co.drnaylor.quickstart.exceptions.QuickStartModuleDiscoveryException;
@@ -20,7 +20,7 @@ import uk.co.drnaylor.quickstart.tests.scaffolding.FakeLoaderTests;
 
 import java.util.Set;
 
-public class ModuleContainerConstructionTests extends FakeLoaderTests {
+public class ModuleHolderConstructionTests extends FakeLoaderTests {
 
     @Rule
     public ExpectedException expectedException = ExpectedException.none();
@@ -64,7 +64,7 @@ public class ModuleContainerConstructionTests extends FakeLoaderTests {
     @Test
     public void testThatConfigAdaptersGetRegisteredOnConstruction() throws Exception {
         // When we load these modules...
-        ModuleContainer mc = getContainer("uk.co.drnaylor.quickstart.tests.modules.adapterstest");
+        ModuleHolder mc = getContainer("uk.co.drnaylor.quickstart.tests.modules.adapterstest");
         mc.loadModules(true);
 
         // ...test that we get three config adapters.
@@ -80,10 +80,10 @@ public class ModuleContainerConstructionTests extends FakeLoaderTests {
     @Test
     public void testThatModulesAreLoadedAsExpected() throws Exception {
         // When we load these modules...
-        ModuleContainer mc = getContainer("uk.co.drnaylor.quickstart.tests.modules.modulestates");
+        ModuleHolder mc = getContainer("uk.co.drnaylor.quickstart.tests.modules.modulestates");
         mc.loadModules(true);
 
-        Set<String> ss = mc.getModules(ModuleContainer.ModuleStatusTristate.ENABLE);
+        Set<String> ss = mc.getModules(ModuleHolder.ModuleStatusTristate.ENABLE);
         Assert.assertTrue(ss.contains("man"));
         Assert.assertTrue(ss.contains("fl"));
         Assert.assertFalse(ss.contains("dis"));
@@ -92,10 +92,10 @@ public class ModuleContainerConstructionTests extends FakeLoaderTests {
     @Test
     public void testThatOneModuleFailingDoesntKillWholeLoader() throws Exception {
         // When we load these modules...
-        ModuleContainer mc = getContainer("uk.co.drnaylor.quickstart.tests.modules.exceptions.onefail");
+        ModuleHolder mc = getContainer("uk.co.drnaylor.quickstart.tests.modules.exceptions.onefail");
         mc.loadModules(false);
 
-        Set<String> ss = mc.getModules(ModuleContainer.ModuleStatusTristate.ENABLE);
+        Set<String> ss = mc.getModules(ModuleHolder.ModuleStatusTristate.ENABLE);
         Assert.assertTrue(ss.contains("prepass"));
         Assert.assertFalse(ss.contains("prefail"));
     }

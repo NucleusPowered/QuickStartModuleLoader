@@ -51,7 +51,7 @@ import javax.annotation.Nullable;
  *     A system may have multiple module containers. Each module container is completely separate from one another.
  * </p>
  */
-public abstract class ModuleContainer {
+public abstract class ModuleHolder {
 
     /**
      * The current phase of the container.
@@ -128,64 +128,33 @@ public abstract class ModuleContainer {
      */
     @Nullable private final String moduleSectionHeader;
 
-    /**
-     * Constructs a {@link ModuleContainer} and starts discovery of the modules.
-     *
-     * @param <N>                  The type of {@link ConfigurationNode} to use.
-     * @param configurationLoader  The {@link ConfigurationLoader} that contains details of whether the modules should be enabled or not.
-     * @param moduleEnabler        The {@link ModuleEnabler} that contains the logic to enable modules.
-     * @param loggerProxy          The {@link LoggerProxy} that contains methods to send messages to the logger, or any other source.
-     * @param onPreEnable          The {@link Procedure} to run on pre enable, before modules are pre-enabled.
-     * @param onEnable             The {@link Procedure} to run on enable, before modules are pre-enabled.
-     * @param onPostEnable         The {@link Procedure} to run on post enable, before modules are pre-enabled.
-     * @param configOptions        The {@link Function} that converts {@link ConfigurationOptions}.
-     * @param requireAnnotation    Whether modules must have the {@link ModuleData} annotation.
-     * @param processDoNotMerge    Whether module configs will have {@link NoMergeIfPresent} annotations processed.
-     * @param headerProcessor      The {@link Function} to use when adding headers to module config sections. {@code null} means no headers.
-     * @param descriptionProcessor The {@link Function} to use when adding descriptions to modules. {@code null} means no descriptions.
-     * @param moduleSection        The name of the section that contains the module enable/disable switches.
-     * @param moduleSectionHeader  The comment header for the "module" section
-     *
-     * @throws QuickStartModuleDiscoveryException if there is an error starting the Module Container.
-     */
-    protected <N extends ConfigurationNode> ModuleContainer(ConfigurationLoader<N> configurationLoader,
-                                                            LoggerProxy loggerProxy,
-                                                            ModuleEnabler moduleEnabler,
-                                                            Procedure onPreEnable,
-                                                            Procedure onEnable,
-                                                            Procedure onPostEnable,
-                                                            Function<ConfigurationOptions, ConfigurationOptions> configOptions,
-                                                            boolean requireAnnotation,
-                                                            boolean processDoNotMerge,
-                                                            @Nullable Function<Module, String> headerProcessor,
-                                                            @Nullable Function<Class<? extends Module>, String> descriptionProcessor,
-                                                            String moduleSection,
-                                                            @Nullable String moduleSectionHeader
-            ) throws QuickStartModuleDiscoveryException {
+    protected <R extends ModuleHolder> ModuleHolder(Builder<R, ? extends Builder<R, ?>> builder)
+            throws QuickStartModuleDiscoveryException {
 
         try {
-            this.config = new SystemConfig<>(configurationLoader, loggerProxy, configOptions);
-            this.loggerProxy = loggerProxy;
-            this.enabler = moduleEnabler;
-            this.onPreEnable = onPreEnable;
-            this.onPostEnable = onPostEnable;
-            this.onEnable = onEnable;
-            this.requireAnnotation = requireAnnotation;
-            this.processDoNotMerge = processDoNotMerge;
-            this.descriptionProcessor = descriptionProcessor == null ? m -> {
+            this.config = new SystemConfig<>(builder.configurationLoader, builder.loggerProxy, builder.configurationOptionsTransformer);
+            this.loggerProxy = builder.loggerProxy;
+            this.enabler = builder.enabler;
+            this.onPreEnable = builder.onPreEnable;
+            this.onPostEnable = builder.onPostEnable;
+            this.onEnable = builder.onEnable;
+            this.requireAnnotation = builder.requireAnnotation;
+            this.processDoNotMerge = builder.doNotMerge;
+            this.descriptionProcessor = builder.moduleDescriptionHandler == null ? m -> {
                 ModuleData md = m.getAnnotation(ModuleData.class);
                 if (md != null) {
                     return md.description();
                 }
 
                 return "";
-            } : descriptionProcessor;
-            this.headerProcessor = headerProcessor == null ? m -> "" : headerProcessor;
-            this.moduleSection = moduleSection;
-            this.moduleSectionHeader = moduleSectionHeader;
+            } : builder.moduleDescriptionHandler;
+            this.headerProcessor = builder.moduleConfigurationHeader == null ? m -> "" : builder.moduleConfigurationHeader;
+            this.moduleSection = builder.moduleConfigSection;
+            this.moduleSectionHeader = builder.moduleDescription;
         } catch (Exception e) {
             throw new QuickStartModuleDiscoveryException("Unable to start QuickStart", e);
         }
+
     }
 
     public final void startDiscover() throws QuickStartModuleDiscoveryException {
@@ -667,9 +636,9 @@ public abstract class ModuleContainer {
     }
 
     /**
-     * Builder class to create a {@link ModuleContainer}
+     * Builder class to create a {@link ModuleHolder}
      */
-    public static abstract class Builder<R extends ModuleContainer, T extends Builder<R, T>> {
+    public static abstract class Builder<R extends ModuleHolder, T extends Builder<R, T>> {
 
         protected ConfigurationLoader<? extends ConfigurationNode> configurationLoader;
         protected boolean requireAnnotation = false;
@@ -897,31 +866,31 @@ public abstract class ModuleContainer {
 
     private interface ConstructPhase {
 
-        void onStart(ModuleContainer container);
+        void onStart(ModuleHolder container);
 
-        void onModuleAction(ModuleContainer moduleContainer, ModuleEnabler enabler, Module module, ModuleSpec ms) throws Exception;
+        void onModuleAction(ModuleHolder moduleContainer, ModuleEnabler enabler, Module module, ModuleSpec ms) throws Exception;
     }
 
     private enum EnablePhase implements ConstructPhase {
         PREENABLE {
             @Override
-            public void onStart(ModuleContainer container) {
+            public void onStart(ModuleHolder container) {
                 container.onPreEnable.invoke();
             }
 
             @Override
-            public void onModuleAction(ModuleContainer moduleContainer, ModuleEnabler enabler, Module module, ModuleSpec ms) throws Exception {
+            public void onModuleAction(ModuleHolder moduleContainer, ModuleEnabler enabler, Module module, ModuleSpec ms) throws Exception {
                 enabler.preEnableModule(module);
             }
         },
         ENABLE {
             @Override
-            public void onStart(ModuleContainer container) {
+            public void onStart(ModuleHolder container) {
                 container.onEnable.invoke();
             }
 
             @Override
-            public void onModuleAction(ModuleContainer moduleContainer, ModuleEnabler enabler, Module module, ModuleSpec ms) throws Exception {
+            public void onModuleAction(ModuleHolder moduleContainer, ModuleEnabler enabler, Module module, ModuleSpec ms) throws Exception {
                 enabler.enableModule(module);
                 ms.setPhase(ModulePhase.ENABLED);
                 if (module instanceof Module.RuntimeDisableable) {
@@ -931,12 +900,12 @@ public abstract class ModuleContainer {
         },
         POSTENABLE {
             @Override
-            public void onStart(ModuleContainer container) {
+            public void onStart(ModuleHolder container) {
                 container.onPostEnable.invoke();
             }
 
             @Override
-            public void onModuleAction(ModuleContainer moduleContainer, ModuleEnabler enabler, Module module, ModuleSpec ms) throws Exception {
+            public void onModuleAction(ModuleHolder moduleContainer, ModuleEnabler enabler, Module module, ModuleSpec ms) throws Exception {
                 enabler.postEnableModule(module);
             }
         }

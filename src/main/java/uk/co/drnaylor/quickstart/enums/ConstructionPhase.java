@@ -5,6 +5,7 @@
 package uk.co.drnaylor.quickstart.enums;
 
 import uk.co.drnaylor.quickstart.Module;
+import uk.co.drnaylor.quickstart.ModuleHolder;
 
 /**
  * Enumeration that describes the module loading phases.
@@ -12,7 +13,7 @@ import uk.co.drnaylor.quickstart.Module;
 public enum ConstructionPhase {
 
     /**
-     * The {@link uk.co.drnaylor.quickstart.ModuleContainer} has been constructed.
+     * The {@link ModuleHolder} has been constructed.
      */
     INITALISED,
 

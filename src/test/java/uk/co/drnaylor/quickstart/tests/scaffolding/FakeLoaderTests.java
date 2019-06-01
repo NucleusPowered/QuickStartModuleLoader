@@ -13,19 +13,32 @@ import ninja.leaping.configurate.ConfigurationOptions;
 import ninja.leaping.configurate.SimpleConfigurationNode;
 import ninja.leaping.configurate.loader.ConfigurationLoader;
 import org.junit.Before;
-import uk.co.drnaylor.quickstart.Module;
 import uk.co.drnaylor.quickstart.ModuleHolder;
 import uk.co.drnaylor.quickstart.exceptions.QuickStartModuleDiscoveryException;
 import uk.co.drnaylor.quickstart.holders.DiscoveryModuleHolder;
 import uk.co.drnaylor.quickstart.holders.ProvidedModuleHolder;
+import uk.co.drnaylor.quickstart.loaders.ModuleEnablerBuilder;
+import uk.co.drnaylor.quickstart.loaders.PhasedModuleEnabler;
+import uk.co.drnaylor.quickstart.tests.modules.DisableableModule;
+import uk.co.drnaylor.quickstart.tests.modules.TestModule;
 
 import java.util.Arrays;
 import java.util.stream.Collectors;
 
 public class FakeLoaderTests {
 
+    protected final PhasedModuleEnabler<TestModule, DisableableModule> BASIC_ENABLER
+            = new ModuleEnablerBuilder<>(TestModule.class, DisableableModule.class).build();
+
     protected ConfigurationLoader<ConfigurationNode> loader;
     protected ConfigurationNode n = SimpleConfigurationNode.root();
+    private final PhasedModuleEnabler<TestModule, DisableableModule> enabler
+            = new ModuleEnablerBuilder<>(TestModule.class, DisableableModule.class)
+                .createEnablePhase("preenable", (module, moduleHolder) -> module.preEnable())
+                .createEnablePhase("enable", (module, moduleHolder) -> module.onEnable())
+                .createEnablePhase("postenable", (module, moduleHolder) -> module.postEnable())
+                .createDisablePhase("disable", (module, moduleHolder) -> module.onDisable())
+                .build();
 
     @Before
     @SuppressWarnings("unchecked")
@@ -38,9 +51,14 @@ public class FakeLoaderTests {
         when(loader.getDefaultOptions()).thenReturn(ConfigurationOptions.defaults());
     }
 
-    protected ModuleHolder<Module> getContainer(String p) throws QuickStartModuleDiscoveryException {
-        ModuleHolder<Module> container = DiscoveryModuleHolder
-                .builder(Module.class)
+    protected PhasedModuleEnabler<TestModule, DisableableModule> getEnabler() {
+        return this.enabler;
+    }
+
+    protected ModuleHolder<TestModule, DisableableModule> getContainer(String p) throws QuickStartModuleDiscoveryException {
+        ModuleHolder<TestModule, DisableableModule> container = DiscoveryModuleHolder
+                .builder(TestModule.class, DisableableModule.class)
+                .setModuleEnabler(this.enabler)
                 .setConfigurationLoader(loader)
                 .setPackageToScan(p)
                 .build();
@@ -48,9 +66,13 @@ public class FakeLoaderTests {
         return container;
     }
 
-    protected ModuleHolder<Module> getProvidedContainer(Module... modules) throws Exception {
-        ModuleHolder<Module> container = ProvidedModuleHolder.builder(Module.class).setConfigurationLoader(loader)
-                .setNoMergeIfPresent(true).setModules(Arrays.stream(modules).collect(Collectors.toSet())).build();
+    protected ModuleHolder<TestModule, DisableableModule> getProvidedContainer(TestModule... modules) throws Exception {
+        ModuleHolder<TestModule, DisableableModule> container = ProvidedModuleHolder
+                .builder(TestModule.class, DisableableModule.class)
+                .setModuleEnabler(this.enabler)
+                .setConfigurationLoader(loader)
+                .setNoMergeIfPresent(true)
+                .setModules(Arrays.stream(modules).collect(Collectors.toSet())).build();
         container.startDiscover();
         return container;
     }

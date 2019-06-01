@@ -4,15 +4,15 @@
  */
 package uk.co.drnaylor.quickstart.tests.modules.donotmergetest;
 
-import uk.co.drnaylor.quickstart.Module;
 import uk.co.drnaylor.quickstart.annotations.ModuleData;
 import uk.co.drnaylor.quickstart.config.AbstractConfigAdapter;
 import uk.co.drnaylor.quickstart.tests.config.adapters.Typed;
+import uk.co.drnaylor.quickstart.tests.modules.TestModule;
 
 import java.util.Optional;
 
 @ModuleData(id = "mergetest", name = "mergetest")
-public class MergeTestModule implements Module {
+public class MergeTestModule implements TestModule {
 
     @Override public Optional<AbstractConfigAdapter<?>> getConfigAdapter() {
         return Optional.of(new Typed());

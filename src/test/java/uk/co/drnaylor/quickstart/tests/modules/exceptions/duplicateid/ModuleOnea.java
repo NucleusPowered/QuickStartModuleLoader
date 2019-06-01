@@ -4,11 +4,11 @@
  */
 package uk.co.drnaylor.quickstart.tests.modules.exceptions.duplicateid;
 
-import uk.co.drnaylor.quickstart.Module;
 import uk.co.drnaylor.quickstart.annotations.ModuleData;
+import uk.co.drnaylor.quickstart.tests.modules.TestModule;
 
 @ModuleData(id = "one", name = "one")
-public class ModuleOnea implements Module {
+public class ModuleOnea implements TestModule {
 
     @Override public void onEnable() {
         

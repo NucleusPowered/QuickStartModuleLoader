@@ -4,11 +4,11 @@
  */
 package uk.co.drnaylor.quickstart.tests.modules.exceptions.onefail;
 
-import uk.co.drnaylor.quickstart.Module;
 import uk.co.drnaylor.quickstart.annotations.ModuleData;
+import uk.co.drnaylor.quickstart.tests.modules.TestModule;
 
 @ModuleData(id = "prefail", name = "prefail")
-public class PreEnableFailModule implements Module {
+public class PreEnableFailModule implements TestModule {
 
     @Override
     public void preEnable() {

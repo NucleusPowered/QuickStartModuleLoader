@@ -4,15 +4,15 @@
  */
 package uk.co.drnaylor.quickstart.tests.modules.extdependenciestest.simple;
 
-import uk.co.drnaylor.quickstart.Module;
 import uk.co.drnaylor.quickstart.annotations.ModuleData;
 import uk.co.drnaylor.quickstart.config.AbstractConfigAdapter;
 import uk.co.drnaylor.quickstart.config.SimpleNodeConfigAdapter;
+import uk.co.drnaylor.quickstart.tests.modules.TestModule;
 
 import java.util.Optional;
 
 @ModuleData(id = "moduleone", name = "moduleone")
-public class ModuleOne implements Module {
+public class ModuleOne implements TestModule {
 
     @Override
     public Optional<AbstractConfigAdapter<?>> getConfigAdapter() {

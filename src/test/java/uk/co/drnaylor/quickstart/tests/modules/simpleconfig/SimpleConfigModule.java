@@ -4,15 +4,15 @@
  */
 package uk.co.drnaylor.quickstart.tests.modules.simpleconfig;
 
-import uk.co.drnaylor.quickstart.Module;
 import uk.co.drnaylor.quickstart.annotations.ModuleData;
 import uk.co.drnaylor.quickstart.config.AbstractConfigAdapter;
 import uk.co.drnaylor.quickstart.config.SimpleNodeConfigAdapter;
+import uk.co.drnaylor.quickstart.tests.modules.TestModule;
 
 import java.util.Optional;
 
 @ModuleData(id = "simpleconfig", name = "simpleconfig")
-public class SimpleConfigModule implements Module {
+public class SimpleConfigModule implements TestModule {
 
     @Override
     public Optional<AbstractConfigAdapter<?>> getConfigAdapter() {

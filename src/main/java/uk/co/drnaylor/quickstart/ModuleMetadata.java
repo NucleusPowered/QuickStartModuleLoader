@@ -16,7 +16,7 @@ import java.util.List;
 /**
  * Internal specification of a module.
  */
-public final class ModuleSpec<M extends Module> {
+public final class ModuleMetadata<M extends Module> {
 
     private final Class<? extends M> moduleClass;
     private final List<String> softDeps;
@@ -28,19 +28,27 @@ public final class ModuleSpec<M extends Module> {
     private final boolean isMandatory;
     private ModulePhase phase = ModulePhase.DISCOVERED;
 
-    ModuleSpec(Class<? extends M> moduleClass, ModuleData data) {
-        this(moduleClass, data.id(), data.name(), data.status(), data.isRequired(), Arrays.asList(data.softDependencies()), Arrays.asList(data.dependencies()));
+    ModuleMetadata(Class<M> moduleClass, boolean isDisableable, ModuleData data) {
+        this(moduleClass,
+                data.id(),
+                data.name(),
+                data.status(),
+                data.isRequired(),
+                isDisableable,
+                Arrays.asList(data.softDependencies()),
+                Arrays.asList(data.dependencies()));
     }
 
-    ModuleSpec(Class<? extends M> moduleClass, String id, String name, LoadingStatus status, boolean isMandatory) {
-        this(moduleClass, id, name, status, isMandatory, Lists.newArrayList(), Lists.newArrayList());
+    ModuleMetadata(Class<M> moduleClass, boolean isDisableable, String id, String name, LoadingStatus status, boolean isMandatory) {
+        this(moduleClass, id, name, status, isMandatory, isDisableable, Lists.newArrayList(), Lists.newArrayList());
     }
 
-    ModuleSpec(Class<? extends M> moduleClass,
+    ModuleMetadata(Class<M> moduleClass,
             String id,
             String name,
             LoadingStatus status,
             boolean isMandatory,
+            boolean isDisableable,
             List<String> softDeps,
             List<String> deps) {
         Preconditions.checkNotNull(moduleClass);
@@ -52,7 +60,7 @@ public final class ModuleSpec<M extends Module> {
 
         this.id = id;
         this.moduleClass = moduleClass;
-        this.runtimeDisableable = Module.RuntimeDisableable.class.isAssignableFrom(moduleClass);
+        this.runtimeDisableable = isDisableable;
         this.name = name;
         this.status = isMandatory ? LoadingStatus.FORCELOAD : status;
         this.isMandatory = isMandatory;

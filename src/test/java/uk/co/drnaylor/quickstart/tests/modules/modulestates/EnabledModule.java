@@ -4,11 +4,11 @@
  */
 package uk.co.drnaylor.quickstart.tests.modules.modulestates;
 
-import uk.co.drnaylor.quickstart.Module;
 import uk.co.drnaylor.quickstart.annotations.ModuleData;
+import uk.co.drnaylor.quickstart.tests.modules.TestModule;
 
 @ModuleData(id = "en", name = "enabled")
-public class EnabledModule implements Module {
+public class EnabledModule implements TestModule {
 
     @Override
     public void onEnable() {

@@ -4,12 +4,12 @@
  */
 package uk.co.drnaylor.quickstart.tests.modules.modulestates;
 
-import uk.co.drnaylor.quickstart.Module;
 import uk.co.drnaylor.quickstart.annotations.ModuleData;
 import uk.co.drnaylor.quickstart.enums.LoadingStatus;
+import uk.co.drnaylor.quickstart.tests.modules.TestModule;
 
 @ModuleData(id = "fl", name = "forceload", status = LoadingStatus.FORCELOAD)
-public class ForceLoadedModule implements Module {
+public class ForceLoadedModule implements TestModule {
     @Override
     public void onEnable() {
 

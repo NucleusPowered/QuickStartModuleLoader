@@ -4,11 +4,11 @@
  */
 package uk.co.drnaylor.quickstart.tests.modules.simplenoconfig;
 
-import uk.co.drnaylor.quickstart.Module;
 import uk.co.drnaylor.quickstart.annotations.ModuleData;
+import uk.co.drnaylor.quickstart.tests.modules.TestModule;
 
 @ModuleData(id = "simple", name = "simple")
-public class SimpleNoConfigModule implements Module {
+public class SimpleNoConfigModule implements TestModule {
     @Override
     public void onEnable() {
         // Nothing to do.

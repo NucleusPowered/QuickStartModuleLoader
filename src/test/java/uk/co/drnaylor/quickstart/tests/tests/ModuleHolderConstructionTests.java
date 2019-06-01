@@ -10,13 +10,14 @@ import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
-import uk.co.drnaylor.quickstart.Module;
 import uk.co.drnaylor.quickstart.ModuleHolder;
 import uk.co.drnaylor.quickstart.config.ModulesConfigAdapter;
 import uk.co.drnaylor.quickstart.config.SimpleNodeConfigAdapter;
 import uk.co.drnaylor.quickstart.exceptions.QuickStartModuleDiscoveryException;
 import uk.co.drnaylor.quickstart.exceptions.QuickStartModuleLoaderException;
 import uk.co.drnaylor.quickstart.tests.config.adapters.SimpleWithDefault;
+import uk.co.drnaylor.quickstart.tests.modules.DisableableModule;
+import uk.co.drnaylor.quickstart.tests.modules.TestModule;
 import uk.co.drnaylor.quickstart.tests.scaffolding.FakeLoaderTests;
 
 import java.util.Set;
@@ -65,7 +66,7 @@ public class ModuleHolderConstructionTests extends FakeLoaderTests {
     @Test
     public void testThatConfigAdaptersGetRegisteredOnConstruction() throws Exception {
         // When we load these modules...
-        ModuleHolder<Module> mc = getContainer("uk.co.drnaylor.quickstart.tests.modules.adapterstest");
+        ModuleHolder<TestModule, DisableableModule> mc = getContainer("uk.co.drnaylor.quickstart.tests.modules.adapterstest");
         mc.loadModules(true);
 
         // ...test that we get three config adapters.
@@ -81,7 +82,7 @@ public class ModuleHolderConstructionTests extends FakeLoaderTests {
     @Test
     public void testThatModulesAreLoadedAsExpected() throws Exception {
         // When we load these modules...
-        ModuleHolder<Module> mc = getContainer("uk.co.drnaylor.quickstart.tests.modules.modulestates");
+        ModuleHolder<TestModule, DisableableModule> mc = getContainer("uk.co.drnaylor.quickstart.tests.modules.modulestates");
         mc.loadModules(true);
 
         Set<String> ss = mc.getModules(ModuleHolder.ModuleStatusTristate.ENABLE);
@@ -93,7 +94,7 @@ public class ModuleHolderConstructionTests extends FakeLoaderTests {
     @Test
     public void testThatOneModuleFailingDoesntKillWholeLoader() throws Exception {
         // When we load these modules...
-        ModuleHolder<Module> mc = getContainer("uk.co.drnaylor.quickstart.tests.modules.exceptions.onefail");
+        ModuleHolder<TestModule, DisableableModule> mc = getContainer("uk.co.drnaylor.quickstart.tests.modules.exceptions.onefail");
         mc.loadModules(false);
 
         Set<String> ss = mc.getModules(ModuleHolder.ModuleStatusTristate.ENABLE);

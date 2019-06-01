@@ -7,9 +7,10 @@ package uk.co.drnaylor.quickstart.tests.tests;
 import com.google.common.reflect.TypeToken;
 import org.junit.Assert;
 import org.junit.Test;
-import uk.co.drnaylor.quickstart.Module;
 import uk.co.drnaylor.quickstart.ModuleHolder;
 import uk.co.drnaylor.quickstart.tests.config.adapters.Typed;
+import uk.co.drnaylor.quickstart.tests.modules.DisableableModule;
+import uk.co.drnaylor.quickstart.tests.modules.TestModule;
 import uk.co.drnaylor.quickstart.tests.modules.donotmergetest.MergeTestModule;
 import uk.co.drnaylor.quickstart.tests.scaffolding.FakeLoaderTests;
 
@@ -30,7 +31,7 @@ public class NoMergeConfigTests extends FakeLoaderTests {
            put("here", "1");
        }});
 
-        ModuleHolder<Module> container = getProvidedContainer(new MergeTestModule());
+        ModuleHolder<TestModule, DisableableModule> container = getProvidedContainer(new MergeTestModule());
         container.loadModules(true);
         Assert.assertEquals(2, container.getConfigAdapterForModule("mergetest", Typed.class).getNode().getMerge().size());
         Assert.assertEquals(1, container.getConfigAdapterForModule("mergetest", Typed.class).getNode().getNomerge().size());

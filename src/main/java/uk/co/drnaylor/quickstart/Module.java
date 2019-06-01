@@ -36,29 +36,4 @@ public interface Module {
      */
     default void checkExternalDependencies() throws MissingDependencyException {}
 
-    /**
-     * Runs before the enable phase.
-     */
-    default void preEnable() {}
-
-    /**
-     * Runs when the module is enabled.
-     */
-    void onEnable();
-
-    /**
-     * Runs after the enable phase.
-     */
-    default void postEnable() {}
-
-    /**
-     * Marks a module as disableable at runtime.
-     */
-    interface RuntimeDisableable extends Module {
-
-        /**
-         * Runs when a module is disabled.
-         */
-        void onDisable();
-    }
 }

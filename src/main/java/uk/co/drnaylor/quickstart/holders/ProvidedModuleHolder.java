@@ -8,7 +8,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import uk.co.drnaylor.quickstart.Module;
 import uk.co.drnaylor.quickstart.ModuleHolder;
-import uk.co.drnaylor.quickstart.ModuleSpec;
+import uk.co.drnaylor.quickstart.ModuleMetadata;
 import uk.co.drnaylor.quickstart.exceptions.NoModuleException;
 import uk.co.drnaylor.quickstart.exceptions.QuickStartModuleDiscoveryException;
 
@@ -18,15 +18,15 @@ import java.util.Set;
 /**
  * The provided module container is provided pre-constructed {@link Module}s to work with.
  */
-public final class ProvidedModuleHolder<M extends Module> extends ModuleHolder<M> {
+public final class ProvidedModuleHolder<M extends Module, D extends M> extends ModuleHolder<M, D> {
 
-    public static <M extends Module> Builder<M> builder(Class<M> moduleClass) {
-        return new Builder<>(moduleClass);
+    public static <M extends Module, D extends M> Builder<M, D> builder(Class<M> moduleClass, Class<D> disableClass) {
+        return new Builder<>(moduleClass, disableClass);
     }
 
     private final Map<Class<? extends M>, M> moduleMap;
 
-    private ProvidedModuleHolder(Builder<M> builder) throws QuickStartModuleDiscoveryException {
+    private ProvidedModuleHolder(Builder<M, D> builder) throws QuickStartModuleDiscoveryException {
         super(builder);
         ImmutableMap.Builder<Class<? extends M>, M> mapBuilder = ImmutableMap.builder();
         for (M module : builder.modules) {
@@ -42,7 +42,7 @@ public final class ProvidedModuleHolder<M extends Module> extends ModuleHolder<M
     }
 
     @Override
-    protected M getModule(ModuleSpec spec) throws Exception {
+    protected M getModule(ModuleMetadata spec) throws Exception {
         M module = moduleMap.get(spec.getModuleClass());
         if (module == null) {
             throw new NoModuleException(spec.getName());
@@ -51,7 +51,7 @@ public final class ProvidedModuleHolder<M extends Module> extends ModuleHolder<M
         return module;
     }
 
-    public static class Builder<M extends Module> extends ModuleHolder.Builder<M, ProvidedModuleHolder<M>, Builder<M>> {
+    public static class Builder<M extends Module, D extends M> extends ModuleHolder.Builder<M, D, ProvidedModuleHolder<M, D>, Builder<M, D>> {
 
         /**
          * The set of module to load.
@@ -63,8 +63,8 @@ public final class ProvidedModuleHolder<M extends Module> extends ModuleHolder<M
          *
          * @param moduleType The type of module.
          */
-        Builder(Class<M> moduleType) {
-            super(moduleType);
+        Builder(Class<M> moduleType, Class<D> disableType) {
+            super(moduleType, disableType);
         }
 
         /**
@@ -73,7 +73,7 @@ public final class ProvidedModuleHolder<M extends Module> extends ModuleHolder<M
          * @param modules The set of moudules to load.
          * @return This {@link Builder}, for chaining.
          */
-        public Builder<M> setModules(Set<M> modules) {
+        public Builder<M, D> setModules(Set<M> modules) {
             Preconditions.checkNotNull(modules);
             Preconditions.checkArgument(!modules.isEmpty());
             this.modules = modules;
@@ -81,7 +81,7 @@ public final class ProvidedModuleHolder<M extends Module> extends ModuleHolder<M
         }
 
         @Override
-        protected Builder<M> getThis() {
+        protected Builder<M, D> getThis() {
             return this;
         }
 
@@ -92,7 +92,7 @@ public final class ProvidedModuleHolder<M extends Module> extends ModuleHolder<M
          * @throws Exception Thrown if the builder how not got all the required information to run.
          */
         @Override
-        public ProvidedModuleHolder<M> build() throws Exception {
+        public ProvidedModuleHolder<M, D> build() throws Exception {
             Preconditions.checkNotNull(modules);
             Preconditions.checkState(!modules.isEmpty());
 

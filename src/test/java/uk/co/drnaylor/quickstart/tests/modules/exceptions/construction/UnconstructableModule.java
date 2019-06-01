@@ -4,11 +4,11 @@
  */
 package uk.co.drnaylor.quickstart.tests.modules.exceptions.construction;
 
-import uk.co.drnaylor.quickstart.Module;
 import uk.co.drnaylor.quickstart.annotations.ModuleData;
+import uk.co.drnaylor.quickstart.tests.modules.TestModule;
 
 @ModuleData(id = "construct", name = "construct")
-public class UnconstructableModule implements Module {
+public class UnconstructableModule implements TestModule {
 
     public UnconstructableModule() {
         throw new RuntimeException();

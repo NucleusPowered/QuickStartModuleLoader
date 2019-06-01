@@ -43,4 +43,10 @@ public abstract class QuickStartModuleLoaderException extends Exception {
             super(module, message, innerException);
         }
     }
+
+    public static class Disabling extends QuickStartModuleLoaderException {
+        public Disabling(Class<? extends Module> module, String message, Exception innerException) {
+            super(module, message, innerException);
+        }
+    }
 }

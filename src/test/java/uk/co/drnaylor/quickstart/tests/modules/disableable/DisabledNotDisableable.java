@@ -4,12 +4,12 @@
  */
 package uk.co.drnaylor.quickstart.tests.modules.disableable;
 
-import uk.co.drnaylor.quickstart.Module;
 import uk.co.drnaylor.quickstart.annotations.ModuleData;
 import uk.co.drnaylor.quickstart.enums.LoadingStatus;
+import uk.co.drnaylor.quickstart.tests.modules.TestModule;
 
 @ModuleData(id = "disnotdis", name = "Dis Not Dis", status = LoadingStatus.DISABLED)
-public class DisabledNotDisableable implements Module {
+public class DisabledNotDisableable implements TestModule {
 
     @Override public void onEnable() {
 

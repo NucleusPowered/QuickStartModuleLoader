@@ -4,17 +4,17 @@
  */
 package uk.co.drnaylor.quickstart.tests.modules.disableable;
 
-import uk.co.drnaylor.quickstart.Module;
 import uk.co.drnaylor.quickstart.annotations.ModuleData;
+import uk.co.drnaylor.quickstart.tests.modules.DisableableModule;
 
 @ModuleData(id = "dis", name = "Dis")
-public class Disableable implements Module.RuntimeDisableable {
+public class Disableable implements DisableableModule {
 
-    @Override public void onEnable() {
+    public void onEnable() {
 
     }
 
-    @Override public void onDisable() {
+    public void onDisable() {
 
     }
 }

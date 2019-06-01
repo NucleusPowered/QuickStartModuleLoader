@@ -9,12 +9,11 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import uk.co.drnaylor.quickstart.Module;
 import uk.co.drnaylor.quickstart.ModuleHolder;
-import uk.co.drnaylor.quickstart.ModuleSpec;
+import uk.co.drnaylor.quickstart.ModuleMetadata;
 import uk.co.drnaylor.quickstart.exceptions.QuickStartModuleDiscoveryException;
 import uk.co.drnaylor.quickstart.holders.discoverystrategies.Strategy;
 import uk.co.drnaylor.quickstart.loaders.ModuleConstructor;
 import uk.co.drnaylor.quickstart.loaders.SimpleModuleConstructor;
-import uk.co.drnaylor.quickstart.util.ThrownBiFunction;
 
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -29,19 +28,23 @@ import java.util.stream.Collectors;
  * in the container, to save users from multiple classpath scans.</p>
  *
  * @param <M> The type of {@link Module} that this contains.
+ * @param <D> The type of {@link Module} that is disableable.
  */
-public final class DiscoveryModuleHolder<M extends Module> extends ModuleHolder<M> {
+public final class DiscoveryModuleHolder<M extends Module, D extends M> extends ModuleHolder<M, D> {
 
     /**
      * Gets a builder to create a {@link DiscoveryModuleHolder}
      *
      * @param moduleClass The {@link Class} of type {@link M} that represents the type of module
      *      that this holder will contain.
+     * @param disableClass The {@link Class} of type {@link D} that represents the type of module
+     *      that this holder will contain and is disableable.
      * @param <M> The type of module.
+     * @param <D> The type of module that is disableable.
      * @return A {@link DiscoveryModuleHolder.Builder} for building a {@link DiscoveryModuleHolder}
      */
-    public static <M extends Module> DiscoveryModuleHolder.Builder<M> builder(Class<M> moduleClass) {
-        return new DiscoveryModuleHolder.Builder<>(moduleClass);
+    public static <M extends Module, D extends M> DiscoveryModuleHolder.Builder<M, D> builder(Class<M> moduleClass, Class<D> disableClass) {
+        return new DiscoveryModuleHolder.Builder<>(moduleClass, disableClass);
     }
 
     /**
@@ -74,7 +77,7 @@ public final class DiscoveryModuleHolder<M extends Module> extends ModuleHolder<
      *
      * @param builder The builder to build this from.
      */
-    private DiscoveryModuleHolder(DiscoveryModuleHolder.Builder<M> builder) throws QuickStartModuleDiscoveryException {
+    private DiscoveryModuleHolder(DiscoveryModuleHolder.Builder<M, D> builder) throws QuickStartModuleDiscoveryException {
         super(builder);
         this.classLoader = builder.classLoader;
         this.constructor = builder.constructor;
@@ -101,7 +104,7 @@ public final class DiscoveryModuleHolder<M extends Module> extends ModuleHolder<
     }
 
     @Override
-    protected M getModule(ModuleSpec<M> spec) throws Exception {
+    protected M getModule(ModuleMetadata<? extends M> spec) throws Exception {
         return constructor.constructModule(spec.getModuleClass());
     }
 
@@ -114,7 +117,8 @@ public final class DiscoveryModuleHolder<M extends Module> extends ModuleHolder<
         return ImmutableSet.copyOf(this.loadedClasses);
     }
 
-    public final static class Builder<M extends Module> extends ModuleHolder.Builder<M, DiscoveryModuleHolder<M>, Builder<M>> {
+    public final static class Builder<M extends Module, D extends M>
+            extends ModuleHolder.Builder<M, D, DiscoveryModuleHolder<M, D>, Builder<M, D>> {
         private String packageToScan;
         private ModuleConstructor<M> constructor = new SimpleModuleConstructor<>();
         private ClassLoader classLoader;
@@ -125,8 +129,8 @@ public final class DiscoveryModuleHolder<M extends Module> extends ModuleHolder<
          *
          * @param moduleType The type of module.
          */
-        Builder(Class<M> moduleType) {
-            super(moduleType);
+        Builder(Class<M> moduleType, Class<D> disableType) {
+            super(moduleType, disableType);
         }
 
         /**
@@ -136,7 +140,7 @@ public final class DiscoveryModuleHolder<M extends Module> extends ModuleHolder<
          *                      that package and all subpackages, such as <code>uk.co.drnaylor.quickstart.config</code>)
          * @return This {@link ModuleHolder.Builder}, for chaining.
          */
-        public Builder<M> setPackageToScan(String packageToScan) {
+        public Builder<M, D> setPackageToScan(String packageToScan) {
             this.packageToScan = packageToScan;
             return this;
         }
@@ -147,7 +151,7 @@ public final class DiscoveryModuleHolder<M extends Module> extends ModuleHolder<
          * @param constructor The constructor to use
          * @return This {@link ModuleHolder.Builder}, for chaining.
          */
-        public Builder<M> setConstructor(ModuleConstructor<M> constructor) {
+        public Builder<M, D> setConstructor(ModuleConstructor<M> constructor) {
             this.constructor = constructor;
             return this;
         }
@@ -158,26 +162,8 @@ public final class DiscoveryModuleHolder<M extends Module> extends ModuleHolder<
          * @param classLoader The class loader to use.
          * @return This {@link ModuleHolder.Builder}, for chaining.
          */
-        public Builder<M> setClassLoader(ClassLoader classLoader) {
+        public Builder<M, D> setClassLoader(ClassLoader classLoader) {
             this.classLoader = classLoader;
-            return this;
-        }
-
-        /**
-         * Sets the {@link DiscoveryStrategy} for this container.
-         *
-         * <p>The strategy consumes the package to scan and the
-         * {@link ClassLoader}, and returns a {@link Set} of
-         * {@link Class}es.</p>
-         *
-         * @param strategy The strategy to use
-         * @return This {@link ModuleHolder.Builder}, for chaining.
-         * @deprecated Use {@link #setStrategy(Strategy)} instead.
-         */
-        @Deprecated
-        public Builder<M> setDiscoveryStrategy(ThrownBiFunction<String, ClassLoader, Set<Class<?>>, Exception> strategy) {
-            Preconditions.checkNotNull(strategy);
-            this.strategy = strategy::apply;
             return this;
         }
 
@@ -191,13 +177,13 @@ public final class DiscoveryModuleHolder<M extends Module> extends ModuleHolder<
          * @param strategy The strategy to use
          * @return This {@link ModuleHolder.Builder}, for chaining.
          */
-        public Builder<M> setStrategy(Strategy strategy) {
+        public Builder<M, D> setStrategy(Strategy strategy) {
             this.strategy = Preconditions.checkNotNull(strategy);
             return this;
         }
 
         @Override
-        protected Builder<M> getThis() {
+        protected Builder<M, D> getThis() {
             return this;
         }
 
@@ -207,7 +193,7 @@ public final class DiscoveryModuleHolder<M extends Module> extends ModuleHolder<
          * @return The {@link ModuleHolder}.
          * @throws QuickStartModuleDiscoveryException if the configuration loader cannot load data from the file.
          */
-        public DiscoveryModuleHolder<M> build() throws QuickStartModuleDiscoveryException {
+        public DiscoveryModuleHolder<M, D> build() throws QuickStartModuleDiscoveryException {
             Preconditions.checkNotNull(packageToScan);
 
             if (constructor == null) {
@@ -221,47 +207,6 @@ public final class DiscoveryModuleHolder<M extends Module> extends ModuleHolder<
             checkBuild();
             return new DiscoveryModuleHolder<>(this);
         }
-    }
-
-    /**
-     * Determines the strategy used to discover modules.
-     *
-     * @deprecated Use {@link Strategy}
-     */
-    @Deprecated
-    public enum DiscoveryStrategy implements ThrownBiFunction<String, ClassLoader, Set<Class<?>>, Exception> {
-
-        /**
-         * The default in-built strategy uses the Google reflect
-         * library.
-         */
-        @Deprecated
-        DEFAULT {
-            @Override public Set<Class<?>> apply(String s, ClassLoader classLoader) throws Exception {
-                return Strategy.DEFAULT.discover(s, classLoader);
-            }
-        },
-
-        /**
-         * Discovers classes using the DEFAULT. Does not use the Fast Classpath Scanner any more.
-         */
-        @Deprecated
-        FAST_CLASSPATH_SCANNER {
-            @Override public Set<Class<?>> apply(String s, ClassLoader classLoader) throws Exception {
-                return Strategy.DEFAULT.discover(s, classLoader);
-            }
-        },
-
-        /**
-         * Uses Google Reflect to discover classes
-         */
-        @Deprecated
-        GOOGLE_REFLECT {
-            @Override public Set<Class<?>> apply(String s, ClassLoader classLoader) throws Exception {
-                return Strategy.DEFAULT.discover(s, classLoader);
-            }
-        }
-
     }
 
 }

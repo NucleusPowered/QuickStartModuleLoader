@@ -4,11 +4,11 @@
  */
 package uk.co.drnaylor.quickstart.tests.modules.exceptions.enabling;
 
-import uk.co.drnaylor.quickstart.Module;
 import uk.co.drnaylor.quickstart.annotations.ModuleData;
+import uk.co.drnaylor.quickstart.tests.modules.TestModule;
 
 @ModuleData(id = "construct", name = "construct")
-public class UnenableableModule implements Module {
+public class UnenableableModule implements TestModule {
 
     @Override
     public void onEnable() {

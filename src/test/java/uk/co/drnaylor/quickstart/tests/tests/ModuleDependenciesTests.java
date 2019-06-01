@@ -19,31 +19,34 @@ public class ModuleDependenciesTests extends FakeLoaderTests {
     public void testDependentModulesAllLoadWhenEnabled() throws QuickStartModuleDiscoveryException, QuickStartModuleLoaderException.Enabling, QuickStartModuleLoaderException.Construction {
         ModuleHolder mc = getContainer("uk.co.drnaylor.quickstart.tests.modules.dependenciestest");
         mc.loadModules(true);
-        Assert.assertTrue(mc.getModules(ModuleHolder.ModuleStatusTristate.ENABLE).size() == 3);
+        Assert.assertEquals(3, mc.getModules(ModuleHolder.ModuleStatusTristate.ENABLE).size());
     }
 
     @Test
-    public void testDisablingModuleThreeOnlyDisabledModuleThree() throws QuickStartModuleDiscoveryException, QuickStartModuleLoaderException.Enabling, QuickStartModuleLoaderException.Construction, NoModuleException, UndisableableModuleException {
+    public void testDisablingModuleThreeOnlyDisabledModuleThree()
+            throws QuickStartModuleDiscoveryException, QuickStartModuleLoaderException, NoModuleException, UndisableableModuleException {
         ModuleHolder mc = getContainer("uk.co.drnaylor.quickstart.tests.modules.dependenciestest");
         mc.disableModule("modulethree");
         mc.loadModules(true);
-        Assert.assertTrue(mc.getModules(ModuleHolder.ModuleStatusTristate.ENABLE).size() == 2);
+        Assert.assertEquals(2, mc.getModules(ModuleHolder.ModuleStatusTristate.ENABLE).size());
         Assert.assertFalse(mc.getModules(ModuleHolder.ModuleStatusTristate.ENABLE).contains("modulethree"));
     }
 
 
     @Test
-    public void testDisablingModuleTwoDisablesModuleThreeToo() throws QuickStartModuleDiscoveryException, QuickStartModuleLoaderException.Enabling, QuickStartModuleLoaderException.Construction, NoModuleException, UndisableableModuleException {
+    public void testDisablingModuleTwoDisablesModuleThreeToo()
+            throws QuickStartModuleDiscoveryException, QuickStartModuleLoaderException, NoModuleException, UndisableableModuleException {
         ModuleHolder mc = getContainer("uk.co.drnaylor.quickstart.tests.modules.dependenciestest");
         mc.disableModule("moduletwo");
         mc.loadModules(true);
-        Assert.assertTrue(mc.getModules(ModuleHolder.ModuleStatusTristate.ENABLE).size() == 1);
+        Assert.assertEquals(1, mc.getModules(ModuleHolder.ModuleStatusTristate.ENABLE).size());
         Assert.assertFalse(mc.getModules(ModuleHolder.ModuleStatusTristate.ENABLE).contains("moduletwo"));
         Assert.assertFalse(mc.getModules(ModuleHolder.ModuleStatusTristate.ENABLE).contains("modulethree"));
     }
 
     @Test(expected = QuickStartModuleLoaderException.Construction.class)
-    public void testDisablingModuleOneDisablesModuleTwoAndThreeToo() throws QuickStartModuleDiscoveryException, QuickStartModuleLoaderException.Enabling, QuickStartModuleLoaderException.Construction, NoModuleException, UndisableableModuleException {
+    public void testDisablingModuleOneDisablesModuleTwoAndThreeToo()
+            throws QuickStartModuleDiscoveryException, QuickStartModuleLoaderException, NoModuleException, UndisableableModuleException {
         ModuleHolder mc = getContainer("uk.co.drnaylor.quickstart.tests.modules.dependenciestest");
         mc.disableModule("moduleone");
         mc.loadModules(true);
@@ -56,18 +59,20 @@ public class ModuleDependenciesTests extends FakeLoaderTests {
     }
 
     @Test(expected = QuickStartModuleLoaderException.Construction.class)
-    public void testMandatoryDependenciesBeingDisabledThrowAnError() throws QuickStartModuleDiscoveryException, QuickStartModuleLoaderException.Enabling, QuickStartModuleLoaderException.Construction, NoModuleException, UndisableableModuleException {
+    public void testMandatoryDependenciesBeingDisabledThrowAnError()
+            throws QuickStartModuleDiscoveryException, QuickStartModuleLoaderException, NoModuleException, UndisableableModuleException {
         ModuleHolder mc = getContainer("uk.co.drnaylor.quickstart.tests.modules.mandatorydepstest");
         mc.disableModule("moduleone");
         mc.loadModules(true);
     }
 
     @Test
-    public void testDisablingSoftDepDoesNotDisableModule() throws QuickStartModuleDiscoveryException, QuickStartModuleLoaderException.Enabling, QuickStartModuleLoaderException.Construction, NoModuleException, UndisableableModuleException {
+    public void testDisablingSoftDepDoesNotDisableModule()
+            throws QuickStartModuleDiscoveryException, QuickStartModuleLoaderException, NoModuleException, UndisableableModuleException {
         ModuleHolder mc = getContainer("uk.co.drnaylor.quickstart.tests.modules.softdepstest");
         mc.disableModule("moduleone");
         mc.loadModules(true);
-        Assert.assertTrue(mc.getModules(ModuleHolder.ModuleStatusTristate.ENABLE).size() == 1);
+        Assert.assertEquals(1, mc.getModules(ModuleHolder.ModuleStatusTristate.ENABLE).size());
         Assert.assertTrue(mc.getModules(ModuleHolder.ModuleStatusTristate.ENABLE).contains("moduletwo"));
     }
 

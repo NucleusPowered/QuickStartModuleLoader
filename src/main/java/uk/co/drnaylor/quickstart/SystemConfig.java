@@ -36,13 +36,13 @@ public final class SystemConfig<N extends ConfigurationNode, M extends Module> e
         this.proxy = proxy;
     }
 
-    void attachModulesConfig(List<ModuleSpec<M>> defaults, Function<Class<? extends M>, String> description, String modulesNode,
+    void attachModulesConfig(List<ModuleMetadata<? extends M>> defaults, Function<Class<? extends M>, String> description, String modulesNode,
             @Nullable String descriptionForModules) throws IOException {
         Preconditions.checkNotNull(defaults);
         Preconditions.checkState(configAdapter == null);
 
         Map<String, LoadingStatus> msls = defaults.stream()
-                .collect(Collectors.toMap(k -> k.getId().toLowerCase(), ModuleSpec::getStatus));
+                .collect(Collectors.toMap(k -> k.getId().toLowerCase(), ModuleMetadata::getStatus));
         Map<String, String> msdesc = defaults.stream()
                 .collect(Collectors.toMap(k -> k.getId().toLowerCase(), k -> description.apply(k.getModuleClass())));
 

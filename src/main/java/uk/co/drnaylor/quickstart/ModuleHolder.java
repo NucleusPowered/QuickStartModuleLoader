@@ -80,6 +80,11 @@ public abstract class ModuleHolder<M extends Module, D extends M> {
     private final Map<String, ModuleMetadata<? extends D>> enabledDisableableModules = Maps.newHashMap();
 
     /**
+     * The modules that are enabled.
+     */
+    private final Map<String, M> enabledModules = Maps.newHashMap();
+
+    /**
      * The actual disableable module objects
      */
     private final Map<String, D> disableableModules = Maps.newHashMap();
@@ -386,7 +391,8 @@ public abstract class ModuleHolder<M extends Module, D extends M> {
             detachConfig(ms.getName());
             ms.setPhase(ModulePhase.DISABLED);
 
-            enabledDisableableModules.remove(moduleName);
+            this.enabledModules.remove(moduleName);
+            this.enabledDisableableModules.remove(moduleName);
         }
     }
 
@@ -443,14 +449,11 @@ public abstract class ModuleHolder<M extends Module, D extends M> {
         // Make sure we get a clean slate here.
         getModules(ModuleStatusTristate.DISABLE).forEach(k -> discoveredModules.get(k).setPhase(ModulePhase.DISABLED));
 
-        // Modules to enable.
-        Map<String, M> modules = Maps.newConcurrentMap();
-
         // Construct them
         for (String s : getModules(ModuleStatusTristate.ENABLE)) {
             ModuleMetadata<? extends M> ms = discoveredModules.get(s);
             try {
-                modules.put(s, getModule(ms));
+                enabledModules.put(s, getModule(ms));
                 ms.setPhase(ModulePhase.CONSTRUCTED);
             } catch (Exception construction) {
                 construction.printStackTrace();
@@ -464,20 +467,20 @@ public abstract class ModuleHolder<M extends Module, D extends M> {
             }
         }
 
-        if (modules.isEmpty()) {
+        if (enabledModules.isEmpty()) {
             currentPhase = ConstructionPhase.ERRORED;
             throw new QuickStartModuleLoaderException.Construction(null, "No modules were constructed.", null);
         }
 
-        modules.forEach((k, v) -> {
+        enabledModules.forEach((k, v) -> {
             if (this.disableableClass.isAssignableFrom(v.getClass())) {
                 this.disableableModules.put(k, this.disableableClass.cast(v));
             }
         });
-        int size = modules.size();
+        int size = enabledModules.size();
 
         {
-            Iterator<Map.Entry<String, M>> im = modules.entrySet().iterator();
+            Iterator<Map.Entry<String, M>> im = enabledModules.entrySet().iterator();
             while (im.hasNext()) {
                 Map.Entry<String, M> module = im.next();
                 try {
@@ -492,10 +495,10 @@ public abstract class ModuleHolder<M extends Module, D extends M> {
             }
         }
 
-        while (size != modules.size()) {
+        while (size != enabledModules.size()) {
             // We might need to disable modules.
-            size = modules.size();
-            Iterator<Map.Entry<String, M>> im = modules.entrySet().iterator();
+            size = enabledModules.size();
+            Iterator<Map.Entry<String, M>> im = enabledModules.entrySet().iterator();
             while (im.hasNext()) {
                 Map.Entry<String, M> module = im.next();
                 if (!dependenciesSatisfied(this.discoveredModules.get(module.getKey()), getModules(ModuleStatusTristate.ENABLE))) {
@@ -510,8 +513,8 @@ public abstract class ModuleHolder<M extends Module, D extends M> {
         }
 
         // Enter Config Adapter phase - attaching before enabling so that enable methods can get any associated configurations.
-        for (String s : modules.keySet()) {
-            M m = modules.get(s);
+        for (String s : enabledModules.keySet()) {
+            M m = enabledModules.get(s);
             try {
                 attachConfig(s, m);
             } catch (Exception e) {
@@ -523,7 +526,6 @@ public abstract class ModuleHolder<M extends Module, D extends M> {
         }
 
         // Enter Enable phase.
-        Map<String, M> modulesToEnable = new HashMap<>(modules);
         Set<String> phases = this.enabler.getEnablePhases();
 
         for (String phase : phases) {
@@ -534,7 +536,7 @@ public abstract class ModuleHolder<M extends Module, D extends M> {
                 this.currentPhase = ConstructionPhase.ERRORED;
                 throw new RuntimeException("Could not load modules, phase " + phase + " failed to load.", ex);
             }
-            Iterator<String> is = modulesToEnable.keySet().iterator();
+            Iterator<String> is = enabledModules.keySet().iterator();
             while (is.hasNext()) {
                 String i = is.next();
                 ModuleMetadata<? extends M> ms = discoveredModules.get(i);
@@ -545,7 +547,7 @@ public abstract class ModuleHolder<M extends Module, D extends M> {
                 }
 
                 try {
-                    M m = modules.get(i);
+                    M m = enabledModules.get(i);
                     this.enabler.startEnablePhase(phase, this, m);
                 } catch (Exception construction) {
                     construction.printStackTrace();
@@ -562,13 +564,13 @@ public abstract class ModuleHolder<M extends Module, D extends M> {
             }
         }
 
-        if (modulesToEnable.isEmpty()) {
+        if (enabledModules.isEmpty()) {
             currentPhase = ConstructionPhase.ERRORED;
             throw new QuickStartModuleLoaderException.Enabling(null, "No modules were enabled.", null);
         }
 
         // Modules in this list did not fail.
-        modulesToEnable.forEach((k, v) -> this.discoveredModules.get(k).setPhase(ModulePhase.ENABLED));
+        enabledModules.forEach((k, v) -> this.discoveredModules.get(k).setPhase(ModulePhase.ENABLED));
         resetDisableableList();
         try {
             config.saveAdapterDefaults(this.processDoNotMerge);
@@ -633,6 +635,7 @@ public abstract class ModuleHolder<M extends Module, D extends M> {
                 }
 
                 ms.setPhase(ModulePhase.ENABLED);
+                this.enabledModules.put(ms.getId(), module);
             } catch (Exception construction) {
                 ms.setPhase(ModulePhase.ERRORED);
                 throw construction;

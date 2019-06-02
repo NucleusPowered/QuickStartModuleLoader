@@ -104,7 +104,7 @@ public final class DiscoveryModuleHolder<M extends Module, D extends M> extends 
     }
 
     @Override
-    protected M getModule(ModuleMetadata<? extends M> spec) throws Exception {
+    protected M constructModule(ModuleMetadata<? extends M> spec) throws Exception {
         return constructor.constructModule(spec.getModuleClass());
     }
 

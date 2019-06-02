@@ -400,7 +400,28 @@ public abstract class ModuleHolder<M extends Module, D extends M> {
         return this.baseClass;
     }
 
-    protected abstract M getModule(ModuleMetadata<? extends M> spec) throws Exception;
+    /**
+     * Get n enabled module given the ID.
+     *
+     * @param id The ID
+     * @param <T> The type, for duck typing
+     * @return The module, if it exists.
+     */
+    @SuppressWarnings("unchecked")
+    public <T extends M> Optional<T> getModule(String id) {
+        return Optional.ofNullable((T) this.enabledModules.get(id));
+    }
+
+    protected M getModule(ModuleMetadata<? extends M> spec) throws Exception {
+        M module = this.enabledModules.get(spec.getId());
+        if (module == null) {
+            return constructModule(spec);
+        }
+
+        return module;
+    }
+
+    protected abstract M constructModule(ModuleMetadata<? extends M> spec) throws Exception;
 
     /**
      * Starts the module construction and enabling phase. This is the final phase for loading the modules.
@@ -453,7 +474,7 @@ public abstract class ModuleHolder<M extends Module, D extends M> {
         for (String s : getModules(ModuleStatusTristate.ENABLE)) {
             ModuleMetadata<? extends M> ms = discoveredModules.get(s);
             try {
-                enabledModules.put(s, getModule(ms));
+                enabledModules.put(s, constructModule(ms));
                 ms.setPhase(ModulePhase.CONSTRUCTED);
             } catch (Exception construction) {
                 construction.printStackTrace();
@@ -620,7 +641,7 @@ public abstract class ModuleHolder<M extends Module, D extends M> {
                 // Construction
                 D module = this.disableableModules.get(ms.getId());
                 if (module == null) {
-                    module = (D) getModule(ms);
+                    module = (D) constructModule(ms);
                     this.disableableModules.put(ms.getId(), module);
                 }
 

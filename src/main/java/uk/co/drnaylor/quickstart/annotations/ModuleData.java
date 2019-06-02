@@ -75,4 +75,5 @@ public @interface ModuleData {
      * @return <code>true</code> if the module just can't be disabled.
      */
     boolean isRequired() default false;
+
 }

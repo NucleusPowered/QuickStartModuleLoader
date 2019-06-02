@@ -42,7 +42,7 @@ public final class ProvidedModuleHolder<M extends Module, D extends M> extends M
     }
 
     @Override
-    protected M getModule(ModuleMetadata spec) throws Exception {
+    protected M constructModule(ModuleMetadata spec) throws Exception {
         M module = moduleMap.get(spec.getModuleClass());
         if (module == null) {
             throw new NoModuleException(spec.getName());

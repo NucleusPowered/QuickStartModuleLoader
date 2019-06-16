@@ -14,7 +14,7 @@ public class DisableableModuleTests extends FakeLoaderTests {
 
     @Test
     public void testThatRuntimeDisableableModuleCanBeDisabled() throws Exception {
-        ModuleHolder container = getContainer("uk.co.drnaylor.quickstart.tests.modules.disableable");
+        ModuleHolder container = getContainer("uk.co.drnaylor.quickstart.tests.modules.disableable", true);
         container.loadModules(true);
 
         Assert.assertTrue(container.isModuleLoaded("dis"));
@@ -24,7 +24,7 @@ public class DisableableModuleTests extends FakeLoaderTests {
 
     @Test(expected = UndisableableModuleException.class)
     public void testThatStandardModuleCannotBeDisabled() throws Exception {
-        ModuleHolder container = getContainer("uk.co.drnaylor.quickstart.tests.modules.disableable");
+        ModuleHolder container = getContainer("uk.co.drnaylor.quickstart.tests.modules.disableable", true);
         container.loadModules(true);
 
         container.disableModule("notdis");
@@ -32,7 +32,7 @@ public class DisableableModuleTests extends FakeLoaderTests {
 
     @Test
     public void testThatRuntimeDisableableModuleCanBeEnabledAtRuntime() throws Exception {
-        ModuleHolder container = getContainer("uk.co.drnaylor.quickstart.tests.modules.disableable");
+        ModuleHolder container = getContainer("uk.co.drnaylor.quickstart.tests.modules.disableable", true);
         container.loadModules(true);
 
         Assert.assertFalse(container.isModuleLoaded("disdis"));
@@ -42,7 +42,7 @@ public class DisableableModuleTests extends FakeLoaderTests {
 
     @Test(expected = IllegalStateException.class)
     public void testThatStandardModuleCannotBeEnabledAtRuntime() throws Exception {
-        ModuleHolder container = getContainer("uk.co.drnaylor.quickstart.tests.modules.disableable");
+        ModuleHolder container = getContainer("uk.co.drnaylor.quickstart.tests.modules.disableable", true);
         container.loadModules(true);
 
         Assert.assertFalse(container.isModuleLoaded("disnotdis"));
@@ -51,7 +51,7 @@ public class DisableableModuleTests extends FakeLoaderTests {
 
     @Test
     public void testThatRuntimeDisableableModuleCanBeDisabledAndEnabledAgain() throws Exception {
-        ModuleHolder container = getContainer("uk.co.drnaylor.quickstart.tests.modules.disableable");
+        ModuleHolder container = getContainer("uk.co.drnaylor.quickstart.tests.modules.disableable", true);
         container.loadModules(true);
 
         Assert.assertTrue(container.isModuleLoaded("dis"));

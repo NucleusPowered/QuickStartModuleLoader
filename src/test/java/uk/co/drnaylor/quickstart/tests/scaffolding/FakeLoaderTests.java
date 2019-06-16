@@ -56,11 +56,16 @@ public class FakeLoaderTests {
     }
 
     protected ModuleHolder<TestModule, DisableableModule> getContainer(String p) throws QuickStartModuleDiscoveryException {
-        ModuleHolder<TestModule, DisableableModule> container = DiscoveryModuleHolder
+        return getContainer(p, false);
+    }
+
+    protected ModuleHolder<TestModule, DisableableModule> getContainer(String p, boolean disable) throws QuickStartModuleDiscoveryException {
+        DiscoveryModuleHolder<TestModule, DisableableModule> container = DiscoveryModuleHolder
                 .builder(TestModule.class, DisableableModule.class)
                 .setModuleEnabler(this.enabler)
                 .setConfigurationLoader(loader)
                 .setPackageToScan(p)
+                .setAllowDisable(disable)
                 .build();
         container.startDiscover();
         return container;

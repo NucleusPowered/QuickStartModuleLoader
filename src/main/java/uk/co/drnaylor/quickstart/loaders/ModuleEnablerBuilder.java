@@ -16,7 +16,6 @@ import java.util.Set;
 
 public class ModuleEnablerBuilder<M extends Module, D extends M> {
 
-    final LinkedHashMap<String, ThrownConsumer<ModuleHolder<M, D>, QuickStartModuleLoaderException>> disablePrePhase = new LinkedHashMap<>();
     final LinkedHashMap<String, ThrownBiConsumer<D, ModuleHolder<M, D>, QuickStartModuleLoaderException>> disablePhase = new LinkedHashMap<>();
     final LinkedHashMap<String, ThrownConsumer<ModuleHolder<M, D>, QuickStartModuleLoaderException>> enablePrePhases = new LinkedHashMap<>();
     final LinkedHashMap<String, ThrownBiConsumer<M, ModuleHolder<M, D>, QuickStartModuleLoaderException>> enablePhases = new LinkedHashMap<>();

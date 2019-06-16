@@ -65,6 +65,11 @@ public abstract class ModuleHolder<M extends Module, D extends M> {
     private final Class<D> disableableClass;
 
     /**
+     * Whether the module are disableable at runtime.
+     */
+    private final boolean allowDisabling;
+
+    /**
      * The current phase of the container.
      */
     private ConstructionPhase currentPhase = ConstructionPhase.INITALISED;
@@ -155,6 +160,7 @@ public abstract class ModuleHolder<M extends Module, D extends M> {
             this.headerProcessor = builder.moduleConfigurationHeader == null ? m -> "" : builder.moduleConfigurationHeader;
             this.moduleSection = builder.moduleConfigSection;
             this.moduleSectionHeader = builder.moduleDescription;
+            this.allowDisabling = builder.allowDisabling;
         } catch (Exception e) {
             throw new QuickStartModuleDiscoveryException("Unable to start QuickStart", e);
         }
@@ -364,6 +370,10 @@ public abstract class ModuleHolder<M extends Module, D extends M> {
             ms.setStatus(LoadingStatus.DISABLED);
         } else {
             Preconditions.checkState(currentPhase == ConstructionPhase.ENABLED);
+            if (!this.allowDisabling) {
+                throw new UndisableableModuleException(moduleName.toLowerCase(), "Cannot disable modules in this holder.");
+            }
+
             ModuleMetadata ms = this.enabledDisableableModules.get(moduleName);
             if (ms == null || !ms.isRuntimeAlterable()) {
                 throw new UndisableableModuleException(moduleName.toLowerCase(), "Cannot disable this module at runtime!");
@@ -726,6 +736,7 @@ public abstract class ModuleHolder<M extends Module, D extends M> {
      */
     public static abstract class Builder<M extends Module, D extends M, R extends ModuleHolder<M, D>, T extends Builder<M, D, R, T>> {
 
+        boolean allowDisabling = false;
         final Class<M> moduleType;
         final Class<D> disableableClass;
         PhasedModuleEnabler<M, D> enabler;
@@ -875,6 +886,17 @@ public abstract class ModuleHolder<M extends Module, D extends M> {
          */
         public T setModuleConfigSectionDescription(@Nullable String description) {
             this.moduleDescription = description;
+            return getThis();
+        }
+
+        /**
+         * Sets whether modules in this module holder can be disabled at runtime.
+         *
+         * @param allowDisable true if so
+         * @return This {@link Builder}, for chaining.
+         */
+        public T setAllowDisable(boolean allowDisable) {
+            this.allowDisabling = allowDisable;
             return getThis();
         }
 

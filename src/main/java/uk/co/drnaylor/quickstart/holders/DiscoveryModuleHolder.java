@@ -6,7 +6,6 @@ package uk.co.drnaylor.quickstart.holders;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Sets;
 import uk.co.drnaylor.quickstart.Module;
 import uk.co.drnaylor.quickstart.ModuleHolder;
 import uk.co.drnaylor.quickstart.ModuleMetadata;
@@ -15,6 +14,7 @@ import uk.co.drnaylor.quickstart.holders.discoverystrategies.Strategy;
 import uk.co.drnaylor.quickstart.loaders.ModuleConstructor;
 import uk.co.drnaylor.quickstart.loaders.SimpleModuleConstructor;
 
+import java.util.HashSet;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -65,7 +65,7 @@ public final class DiscoveryModuleHolder<M extends Module, D extends M> extends 
     /**
      * The classes that were loaded by the module loader.
      */
-    private final Set<Class<?>> loadedClasses = Sets.newHashSet();
+    private final Set<Class<?>> loadedClasses = new HashSet<>();
 
     /**
      * The strategy for loading classes on the classpath.

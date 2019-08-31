@@ -4,8 +4,6 @@
  */
 package uk.co.drnaylor.quickstart.annotations;
 
-import uk.co.drnaylor.quickstart.config.AbstractConfigAdapter;
-
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;

@@ -7,7 +7,6 @@ package uk.co.drnaylor.quickstart.tests.config;
 import ninja.leaping.configurate.ConfigurationNode;
 import ninja.leaping.configurate.ConfigurationOptions;
 import ninja.leaping.configurate.loader.ConfigurationLoader;
-import uk.co.drnaylor.quickstart.config.AbstractAdaptableConfig;
 
 import java.io.IOException;
 import java.util.function.Function;

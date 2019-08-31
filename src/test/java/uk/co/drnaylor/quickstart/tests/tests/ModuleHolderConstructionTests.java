@@ -11,8 +11,6 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import uk.co.drnaylor.quickstart.ModuleHolder;
-import uk.co.drnaylor.quickstart.config.ModulesConfigAdapter;
-import uk.co.drnaylor.quickstart.config.SimpleNodeConfigAdapter;
 import uk.co.drnaylor.quickstart.exceptions.QuickStartModuleDiscoveryException;
 import uk.co.drnaylor.quickstart.exceptions.QuickStartModuleLoaderException;
 import uk.co.drnaylor.quickstart.tests.config.adapters.SimpleWithDefault;

@@ -8,9 +8,6 @@ import com.google.common.base.Preconditions;
 import ninja.leaping.configurate.ConfigurationNode;
 import ninja.leaping.configurate.ConfigurationOptions;
 import ninja.leaping.configurate.loader.ConfigurationLoader;
-import uk.co.drnaylor.quickstart.config.AbstractAdaptableConfig;
-import uk.co.drnaylor.quickstart.config.AbstractConfigAdapter;
-import uk.co.drnaylor.quickstart.config.ModulesConfigAdapter;
 import uk.co.drnaylor.quickstart.enums.LoadingStatus;
 
 import java.io.IOException;
@@ -22,9 +19,9 @@ import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 
 /**
- * Defines the configuration file that loads the modules, and any {@link AbstractConfigAdapter}s.
+ * Defines the configuration file that loads the modules.
  */
-public final class SystemConfig<N extends ConfigurationNode, M extends Module> extends AbstractAdaptableConfig<N> {
+public final class SystemConfig<N extends ConfigurationNode, M extends Module> {
 
     private final LoggerProxy proxy;
     private ModulesConfigAdapter configAdapter;

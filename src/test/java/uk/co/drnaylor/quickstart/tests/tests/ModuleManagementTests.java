@@ -8,7 +8,6 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import uk.co.drnaylor.quickstart.ModuleHolder;
-import uk.co.drnaylor.quickstart.config.ModulesConfigAdapter;
 import uk.co.drnaylor.quickstart.exceptions.UndisableableModuleException;
 import uk.co.drnaylor.quickstart.tests.scaffolding.FakeLoaderTests;
 

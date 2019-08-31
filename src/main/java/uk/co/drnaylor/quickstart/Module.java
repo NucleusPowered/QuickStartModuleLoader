@@ -4,25 +4,13 @@
  */
 package uk.co.drnaylor.quickstart;
 
-import uk.co.drnaylor.quickstart.config.AbstractConfigAdapter;
 import uk.co.drnaylor.quickstart.exceptions.MissingDependencyException;
-
-import java.util.Optional;
 
 /**
  * This class defines what a module is, what it loads, and how it works. It should be paired with the
  * {@link uk.co.drnaylor.quickstart.annotations.ModuleData} annotation in order to define metadata about it.
  */
 public interface Module {
-
-    /**
-     * Gets a {@link AbstractConfigAdapter}, should one be required for the main config file.
-     *
-     * @return An {@link Optional} containing an {@link AbstractConfigAdapter} if the module wishes.
-     */
-    default Optional<AbstractConfigAdapter<?>> getConfigAdapter() {
-        return Optional.empty();
-    }
 
     /**
      * Performs additional checks to ensure the module has everything it requires loaded.

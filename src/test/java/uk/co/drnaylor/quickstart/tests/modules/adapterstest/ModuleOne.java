@@ -5,8 +5,6 @@
 package uk.co.drnaylor.quickstart.tests.modules.adapterstest;
 
 import uk.co.drnaylor.quickstart.annotations.ModuleData;
-import uk.co.drnaylor.quickstart.config.AbstractConfigAdapter;
-import uk.co.drnaylor.quickstart.config.SimpleNodeConfigAdapter;
 import uk.co.drnaylor.quickstart.tests.modules.TestModule;
 
 import java.util.Optional;

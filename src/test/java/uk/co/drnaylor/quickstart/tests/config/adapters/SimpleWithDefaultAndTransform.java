@@ -6,7 +6,6 @@ package uk.co.drnaylor.quickstart.tests.config.adapters;
 
 import com.google.common.collect.Lists;
 import ninja.leaping.configurate.ConfigurationNode;
-import uk.co.drnaylor.quickstart.config.SimpleNodeConfigAdapter;
 
 import java.util.List;
 

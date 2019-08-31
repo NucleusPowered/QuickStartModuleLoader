@@ -11,12 +11,10 @@ import com.google.common.collect.Maps;
 import ninja.leaping.configurate.ConfigurationNode;
 import ninja.leaping.configurate.ConfigurationOptions;
 import ninja.leaping.configurate.loader.ConfigurationLoader;
+import ninja.leaping.configurate.objectmapping.ObjectMapper;
 import ninja.leaping.configurate.objectmapping.ObjectMappingException;
 import ninja.leaping.configurate.objectmapping.serialize.ConfigSerializable;
 import uk.co.drnaylor.quickstart.annotations.ModuleData;
-import uk.co.drnaylor.quickstart.config.AbstractConfigAdapter;
-import uk.co.drnaylor.quickstart.config.NoMergeIfPresent;
-import uk.co.drnaylor.quickstart.config.TypedAbstractConfigAdapter;
 import uk.co.drnaylor.quickstart.enums.ConstructionPhase;
 import uk.co.drnaylor.quickstart.enums.LoadingStatus;
 import uk.co.drnaylor.quickstart.enums.ModulePhase;
@@ -138,6 +136,11 @@ public abstract class ModuleHolder<M extends Module, D extends M> {
      * The header of the configuration section that contains the module flags
      */
     @Nullable private final String moduleSectionHeader;
+
+    /**
+     * Contains the configuration objects for the modules.
+     */
+    private final Map<Class<?>, ObjectMapper<?>.BoundInstance> moduleConfigurationObjects = new HashMap<>();
 
     protected <R extends ModuleHolder<M, D>, B extends Builder<M, D, R, B>> ModuleHolder(B builder)
             throws QuickStartModuleDiscoveryException {
@@ -719,6 +722,18 @@ public abstract class ModuleHolder<M extends Module, D extends M> {
      */
     public final void reloadSystemConfig() throws IOException {
         config.load();
+    }
+
+    /**
+     * Gets the configuration object for the supplied module.
+     *
+     * @param module The module to get the config object for
+     * @param <T> The type of config object
+     * @return The configuration object
+     */
+    @SuppressWarnings("unchecked")
+    public final <T> T getConfigForModule(Module.Configurable<T> module) {
+        return (T) this.moduleConfigurationObjects.get(module.getConfigClass()).getInstance();
     }
 
     /**

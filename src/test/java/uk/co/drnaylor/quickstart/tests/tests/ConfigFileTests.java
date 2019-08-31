@@ -19,7 +19,6 @@ import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
-import uk.co.drnaylor.quickstart.config.AbstractAdaptableConfig;
 import uk.co.drnaylor.quickstart.tests.config.SimpleConfig;
 import uk.co.drnaylor.quickstart.tests.scaffolding.FakeLoaderTests;
 

@@ -5,7 +5,6 @@
 package uk.co.drnaylor.quickstart.tests.modules.adaptersmanualtransformtest;
 
 import uk.co.drnaylor.quickstart.annotations.ModuleData;
-import uk.co.drnaylor.quickstart.config.AbstractConfigAdapter;
 import uk.co.drnaylor.quickstart.tests.config.adapters.SimpleWithDefaultAndManualTransform;
 import uk.co.drnaylor.quickstart.tests.modules.TestModule;
 

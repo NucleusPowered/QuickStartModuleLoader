@@ -13,7 +13,6 @@ import org.junit.Test;
 import uk.co.drnaylor.quickstart.DefaultLogger;
 import uk.co.drnaylor.quickstart.Module;
 import uk.co.drnaylor.quickstart.SystemConfig;
-import uk.co.drnaylor.quickstart.config.ModulesConfigAdapter;
 import uk.co.drnaylor.quickstart.enums.LoadingStatus;
 import uk.co.drnaylor.quickstart.tests.scaffolding.FakeLoaderTests;
 

@@ -5,7 +5,6 @@
 package uk.co.drnaylor.quickstart.tests.modules.dependenciestest;
 
 import uk.co.drnaylor.quickstart.annotations.ModuleData;
-import uk.co.drnaylor.quickstart.config.AbstractConfigAdapter;
 import uk.co.drnaylor.quickstart.tests.config.adapters.SimpleWithDefault;
 import uk.co.drnaylor.quickstart.tests.modules.TestModule;
 

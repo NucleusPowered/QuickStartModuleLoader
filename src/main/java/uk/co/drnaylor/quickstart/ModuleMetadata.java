@@ -6,12 +6,13 @@ package uk.co.drnaylor.quickstart;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
-import uk.co.drnaylor.quickstart.annotations.ModuleData;
 import uk.co.drnaylor.quickstart.enums.LoadingStatus;
 import uk.co.drnaylor.quickstart.enums.ModulePhase;
 
 import java.util.Arrays;
 import java.util.List;
+
+import javax.annotation.Nullable;
 
 /**
  * Internal specification of a module.
@@ -21,6 +22,7 @@ public final class ModuleMetadata<M extends Module> {
     private final Class<? extends M> moduleClass;
     private final List<String> softDeps;
     private final List<String> deps;
+    @Nullable private final String description;
     private final String name;
     private final String id;
     private final boolean runtimeDisableable;
@@ -32,6 +34,7 @@ public final class ModuleMetadata<M extends Module> {
         this(moduleClass,
                 data.id(),
                 data.name(),
+                data.description(),
                 data.status(),
                 data.isRequired(),
                 isDisableable,
@@ -39,13 +42,15 @@ public final class ModuleMetadata<M extends Module> {
                 Arrays.asList(data.dependencies()));
     }
 
-    ModuleMetadata(Class<M> moduleClass, boolean isDisableable, String id, String name, LoadingStatus status, boolean isMandatory) {
-        this(moduleClass, id, name, status, isMandatory, isDisableable, Lists.newArrayList(), Lists.newArrayList());
+    ModuleMetadata(Class<M> moduleClass, boolean isDisableable, String id, String name, String description, LoadingStatus status,
+            boolean isMandatory) {
+        this(moduleClass, id, name, description, status, isMandatory, isDisableable, Lists.newArrayList(), Lists.newArrayList());
     }
 
     ModuleMetadata(Class<M> moduleClass,
             String id,
             String name,
+            String description,
             LoadingStatus status,
             boolean isMandatory,
             boolean isDisableable,
@@ -62,6 +67,7 @@ public final class ModuleMetadata<M extends Module> {
         this.moduleClass = moduleClass;
         this.runtimeDisableable = isDisableable;
         this.name = name;
+        this.description = description != null ? description : "";
         this.status = isMandatory ? LoadingStatus.FORCELOAD : status;
         this.isMandatory = isMandatory;
         this.softDeps = softDeps;
@@ -93,6 +99,15 @@ public final class ModuleMetadata<M extends Module> {
      */
     public String getName() {
         return name;
+    }
+
+    /**
+     * Gets the description of the module. May be empty.
+     *
+     * @return The description, if any.
+     */
+    public String getDescription() {
+        return description;
     }
 
     /**

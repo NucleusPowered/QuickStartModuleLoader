@@ -7,8 +7,8 @@ package uk.co.drnaylor.quickstart;
 import uk.co.drnaylor.quickstart.exceptions.MissingDependencyException;
 
 /**
- * This class defines what a module is, what it loads, and how it works. It should be paired with the
- * {@link uk.co.drnaylor.quickstart.annotations.ModuleData} annotation in order to define metadata about it.
+ * This class defines what a module is, what it loads, and how it works. It must be paired with the
+ * {@link ModuleData} annotation in order to define metadata about it.
  */
 public interface Module {
 

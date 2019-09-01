@@ -1,3 +1,7 @@
+/*
+ * This file is part of QuickStart Module Loader, licensed under the MIT License (MIT). See the LICENSE.txt file
+ * at the root of this project for more details.
+ */
 package uk.co.drnaylor.quickstart.config;
 
 import ninja.leaping.configurate.ConfigurationNode;
@@ -31,5 +35,13 @@ public @interface Configuration {
      * @return true if so, false otherwise
      */
     boolean mergeIfPresent() default true;
+
+    /**
+     * Provides a class that will transform configuration sections. The class
+     * MUST have a no-args constructor and instantiatable.
+     *
+     * @return The transformer. If the {@link ConfigTransformer}, indicates no transformations.
+     */
+    Class<? extends ConfigTransformer> transformer() default ConfigTransformer.class;
 
 }

@@ -6,6 +6,8 @@ package uk.co.drnaylor.quickstart.exceptions;
 
 import uk.co.drnaylor.quickstart.Module;
 
+import javax.annotation.Nullable;
+
 public abstract class QuickStartModuleLoaderException extends Exception {
 
     private final Class<? extends Module> moduleClass;
@@ -20,7 +22,7 @@ public abstract class QuickStartModuleLoaderException extends Exception {
      *
      * @return The {@link Class}
      */
-    public Class<? extends Module> getModuleClass() {
+    @Nullable public Class<? extends Module> getModuleClass() {
         return this.moduleClass;
     }
 

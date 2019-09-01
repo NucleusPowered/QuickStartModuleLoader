@@ -9,16 +9,15 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
 import ninja.leaping.configurate.ConfigurationNode;
-import ninja.leaping.configurate.ConfigurationOptions;
 import ninja.leaping.configurate.loader.ConfigurationLoader;
-import ninja.leaping.configurate.objectmapping.ObjectMapper;
+import ninja.leaping.configurate.objectmapping.DefaultObjectMapperFactory;
+import ninja.leaping.configurate.objectmapping.ObjectMapperFactory;
 import ninja.leaping.configurate.objectmapping.ObjectMappingException;
-import ninja.leaping.configurate.objectmapping.serialize.ConfigSerializable;
-import uk.co.drnaylor.quickstart.annotations.ModuleData;
+import uk.co.drnaylor.quickstart.config.Configuration;
+import uk.co.drnaylor.quickstart.config.ConfigurationHolder;
 import uk.co.drnaylor.quickstart.enums.ConstructionPhase;
 import uk.co.drnaylor.quickstart.enums.LoadingStatus;
 import uk.co.drnaylor.quickstart.enums.ModulePhase;
-import uk.co.drnaylor.quickstart.exceptions.IncorrectAdapterTypeException;
 import uk.co.drnaylor.quickstart.exceptions.MissingDependencyException;
 import uk.co.drnaylor.quickstart.exceptions.NoModuleException;
 import uk.co.drnaylor.quickstart.exceptions.QuickStartModuleDiscoveryException;
@@ -68,6 +67,11 @@ public abstract class ModuleHolder<M extends Module, D extends M> {
     private final boolean allowDisabling;
 
     /**
+     * Provides the header for a config section for a module.
+     */
+    private final Function<Class<? extends M>, String> moduleConfigBlockHeaderSupplier;
+
+    /**
      * The current phase of the container.
      */
     private ConstructionPhase currentPhase = ConstructionPhase.INITALISED;
@@ -93,11 +97,6 @@ public abstract class ModuleHolder<M extends Module, D extends M> {
     private final Map<String, D> disableableModules = Maps.newHashMap();
 
     /**
-     * Contains the main configuration file.
-     */
-    protected final SystemConfig<?, M> config;
-
-    /**
      * The logger to use.
      */
     protected final LoggerProxy loggerProxy;
@@ -108,61 +107,32 @@ public abstract class ModuleHolder<M extends Module, D extends M> {
     private final PhasedModuleEnabler<M, D> enabler;
 
     /**
-     * Whether the {@link ModuleData} annotation must be present on modules.
-     */
-    private final boolean requireAnnotation;
-
-    /**
-     * Whether or not to take note of {@link NoMergeIfPresent} annotations on configs.
-     */
-    private final boolean processDoNotMerge;
-
-    /**
-     * The function that determines configuration headers for an entry.
-     */
-    private final Function<M, String> headerProcessor;
-
-    /**
-     * The function that determines the descriptions for a module's name.
-     */
-    private final Function<Class<? extends M>, String> descriptionProcessor;
-
-    /**
-     * The name of the configuration section that contains the module flags
-     */
-    private final String moduleSection;
-
-    /**
-     * The header of the configuration section that contains the module flags
-     */
-    @Nullable private final String moduleSectionHeader;
-
-    /**
      * Contains the configuration objects for the modules.
      */
-    private final Map<Class<?>, ObjectMapper<?>.BoundInstance> moduleConfigurationObjects = new HashMap<>();
+    private final ConfigurationHolder configurationHolder;
 
-    protected <R extends ModuleHolder<M, D>, B extends Builder<M, D, R, B>> ModuleHolder(B builder)
+    protected <R extends ModuleHolder<M, D>, B extends Builder<M, D, R, B>, N extends ConfigurationNode> ModuleHolder(B builder)
             throws QuickStartModuleDiscoveryException {
         try {
             this.baseClass = builder.moduleType;
             this.disableableClass = builder.disableableClass;
-            this.config = new SystemConfig<>(builder.configurationLoader, builder.loggerProxy, builder.configurationOptionsTransformer);
-            this.loggerProxy = builder.loggerProxy;
-            this.enabler = builder.enabler;
-            this.requireAnnotation = builder.requireAnnotation;
-            this.processDoNotMerge = builder.doNotMerge;
-            this.descriptionProcessor = builder.moduleDescriptionHandler == null ? m -> {
-                ModuleData md = m.getAnnotation(ModuleData.class);
+            Function<String, String> perModuleDescription = builder.moduleSectionPerModuleDescriptionSupplier == null ? m -> {
+                ModuleMetadata<? extends M> md = this.discoveredModules.get(m);
                 if (md != null) {
-                    return md.description();
+                    return md.getDescription();
                 }
 
                 return "";
-            } : builder.moduleDescriptionHandler;
-            this.headerProcessor = builder.moduleConfigurationHeader == null ? m -> "" : builder.moduleConfigurationHeader;
-            this.moduleSection = builder.moduleConfigSection;
-            this.moduleSectionHeader = builder.moduleDescription;
+            } : builder.moduleSectionPerModuleDescriptionSupplier;
+            this.moduleConfigBlockHeaderSupplier = builder.moduleConfigBlockHeaderSupplier == null ? m -> "" : builder.moduleConfigBlockHeaderSupplier;
+            this.configurationHolder = new ConfigurationHolder(
+                    builder.configurationLoader,
+                    builder.objectMapperFactory,
+                    builder.moduleConfigSectionKey,
+                    builder.moduleSectionHeader,
+                    perModuleDescription);
+            this.loggerProxy = builder.loggerProxy;
+            this.enabler = builder.enabler;
             this.allowDisabling = builder.allowDisabling;
         } catch (Exception e) {
             throw new QuickStartModuleDiscoveryException("Unable to start QuickStart", e);
@@ -185,14 +155,10 @@ public abstract class ModuleHolder<M extends Module, D extends M> {
                     ModuleData md = s.getAnnotation(ModuleData.class);
                     id = md.id().toLowerCase();
                     ms = new ModuleMetadata<>(s, this.disableableClass.isAssignableFrom(s), md);
-                } else if (this.requireAnnotation) {
-                    loggerProxy.warn(MessageFormat.format("The module class {0} does not have a ModuleData annotation associated with it. "
-                            + "It is not being loaded as the module container requires the annotation to be present.", s.getName()));
-                    continue;
                 } else {
-                    id = s.getName().toLowerCase();
-                    loggerProxy.warn(MessageFormat.format("The module {0} does not have a ModuleData annotation associated with it. We're just assuming an ID of {0}.", id));
-                    ms = new ModuleMetadata<>(s, this.disableableClass.isAssignableFrom(s), id, id, LoadingStatus.ENABLED, false);
+                    loggerProxy.warn(MessageFormat.format("The module class {0} does not have a ModuleData annotation associated with it. "
+                            + "It is not being loaded.", s.getName()));
+                    continue;
                 }
 
                 if (discovered.containsKey(id)) {
@@ -211,28 +177,24 @@ public abstract class ModuleHolder<M extends Module, D extends M> {
                             .filter(rModuleMetadata -> !rModuleMetadata.isMandatory())
                             .collect(Collectors.toList());
 
-            // Attaches config adapter and loads in the defaults.
-            config.attachModulesConfig(moduleMetadataList, this.descriptionProcessor, this.moduleSection, this.moduleSectionHeader);
-            config.saveAdapterDefaults(false);
+            // Load the defaults.
+            this.configurationHolder.registerModuleDefaults(this.discoveredModules.values());
+            this.configurationHolder.load(false); // we only grab the module list for now.
+            Map<String, LoadingStatus> moduleLoadingStatus = this.configurationHolder.getModuleLoadingStatus();
 
             // Load what we have in config into our discovered modules.
-            try {
-                config.getConfigAdapter().getNode().forEach((k, v) -> {
-                    try {
-                        ModuleMetadata<? extends M> ms = discoveredModules.get(k);
-                        if (ms != null) {
-                            ms.setStatus(v);
-                        } else {
-                            loggerProxy.warn(String.format("Ignoring module entry %s in the configuration file: module does not exist.", k));
-                        }
-                    } catch (IllegalStateException ex) {
-                        loggerProxy.warn("A mandatory module can't have its status changed by config. Falling back to FORCELOAD for " + k);
+            moduleLoadingStatus.forEach((k, v) -> {
+                try {
+                    ModuleMetadata<? extends M> ms = discoveredModules.get(k);
+                    if (ms != null) {
+                        ms.setStatus(v);
+                    } else {
+                        loggerProxy.warn(String.format("Ignoring module entry %s in the configuration file: module does not exist.", k));
                     }
-                });
-            } catch (ObjectMappingException e) {
-                loggerProxy.warn("Could not load modules config, falling back to defaults.");
-                e.printStackTrace();
-            }
+                } catch (IllegalStateException ex) {
+                    loggerProxy.warn("A mandatory module can't have its status changed by config. Falling back to FORCELOAD for " + k);
+                }
+            });
 
             // Modules have been discovered.
             currentPhase = ConstructionPhase.DISCOVERED;
@@ -391,7 +353,7 @@ public abstract class ModuleHolder<M extends Module, D extends M> {
                 try {
                     this.enabler.startDisablePhase(phase, this, module);
                 } catch (Exception e) {
-                    detachConfig(ms.getName());
+                    this.configurationHolder.remove(module.getClass());
                     ms.setPhase(ModulePhase.ERRORED);
                     throw new QuickStartModuleLoaderException.Disabling(
                             module.getClass(),
@@ -401,7 +363,7 @@ public abstract class ModuleHolder<M extends Module, D extends M> {
                 }
             }
 
-            detachConfig(ms.getName());
+            this.configurationHolder.remove(module.getClass());
             ms.setPhase(ModulePhase.DISABLED);
 
             this.enabledModules.remove(moduleName);
@@ -549,13 +511,28 @@ public abstract class ModuleHolder<M extends Module, D extends M> {
         // Enter Config Adapter phase - attaching before enabling so that enable methods can get any associated configurations.
         for (String s : enabledModules.keySet()) {
             M m = enabledModules.get(s);
+            ModuleMetadata<? extends M> moduleMetadata = discoveredModules.get(s);
             try {
-                attachConfig(s, m);
+                if (m.getClass().isAnnotationPresent(Configuration.class)) {
+                    this.configurationHolder.add(m.getClass(),
+                            moduleMetadata,
+                            this.moduleConfigBlockHeaderSupplier.apply(moduleMetadata.getModuleClass()));
+                }
             } catch (Exception e) {
                 e.printStackTrace();
                 if (failOnOneError) {
                     throw new QuickStartModuleLoaderException.Enabling(m.getClass(), "Failed to attach config.", e);
                 }
+            }
+        }
+
+        // Load the config
+        try {
+            this.configurationHolder.loadModuleSection();
+        } catch (ObjectMappingException e) {
+            e.printStackTrace();
+            if (failOnOneError) {
+                throw new QuickStartModuleLoaderException.Enabling(null, "Failed to load config.", e);
             }
         }
 
@@ -607,7 +584,7 @@ public abstract class ModuleHolder<M extends Module, D extends M> {
         enabledModules.forEach((k, v) -> this.discoveredModules.get(k).setPhase(ModulePhase.ENABLED));
         resetDisableableList();
         try {
-            config.saveAdapterDefaults(this.processDoNotMerge);
+            this.configurationHolder.saveBack();
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -680,60 +657,34 @@ public abstract class ModuleHolder<M extends Module, D extends M> {
         resetDisableableList();
     }
 
-    private void attachConfig(String name, M m) throws Exception {
-        Optional<AbstractConfigAdapter<?>> a = m.getConfigAdapter();
-        if (a.isPresent()) {
-            config.attachConfigAdapter(name, a.get(), this.headerProcessor.apply(m));
-        }
-    }
-
-    private void detachConfig(String name) {
-        config.detachConfigAdapter(name);
-    }
-
-    @SuppressWarnings("unchecked")
-    public final <C extends AbstractConfigAdapter<?>> C getConfigAdapterForModule(String module,
-            Class<C> adapterClass) throws NoModuleException, IncorrectAdapterTypeException {
-        return config.getConfigAdapterForModule(module, adapterClass);
-    }
-
     /**
-     * Saves the {@link SystemConfig}.
+     * Saves the vonfig.
      *
      * @throws IOException If the config could not be saved.
      */
     public final void saveSystemConfig() throws IOException {
-        config.save();
+        this.configurationHolder.saveBack();
     }
 
     /**
-     * Refreshes the backing {@link ConfigurationNode} and saves the {@link SystemConfig}.
-     *
-     * @throws IOException If the config could not be saved.
-     */
-    public final void refreshSystemConfig() throws IOException {
-        config.save(true);
-    }
-
-    /**
-     * Reloads the {@link SystemConfig}, but does not change any module status.
+     * Reloads the configuration, but does not change any module status.
      *
      * @throws IOException If the config could not be reloaded.
+     * @throws ObjectMappingException if the config is malformed
      */
-    public final void reloadSystemConfig() throws IOException {
-        config.load();
+    public final void reloadSystemConfig() throws IOException, ObjectMappingException {
+        this.configurationHolder.load(true);
     }
 
     /**
-     * Gets the configuration object for the supplied module.
+     * Gets the configuration object from its class.
      *
-     * @param module The module to get the config object for
+     * @param configurationClass The config object
      * @param <T> The type of config object
      * @return The configuration object
      */
-    @SuppressWarnings("unchecked")
-    public final <T> T getConfigForModule(Module.Configurable<T> module) {
-        return (T) this.moduleConfigurationObjects.get(module.getConfigClass()).getInstance();
+     final <T> T getConfig(Class<T> configurationClass) throws IllegalArgumentException {
+        return this.configurationHolder.getConfig(configurationClass);
     }
 
     /**
@@ -758,12 +709,11 @@ public abstract class ModuleHolder<M extends Module, D extends M> {
         ConfigurationLoader<? extends ConfigurationNode> configurationLoader;
         boolean requireAnnotation = false;
         LoggerProxy loggerProxy;
-        Function<ConfigurationOptions, ConfigurationOptions> configurationOptionsTransformer = x -> x;
-        boolean doNotMerge = false;
-        @Nullable Function<Class<? extends M>, String> moduleDescriptionHandler = null;
-        @Nullable Function<M, String> moduleConfigurationHeader = null;
-        String moduleConfigSection = "modules";
-        @Nullable String moduleDescription = null;
+        @Nullable Function<String, String> moduleSectionPerModuleDescriptionSupplier = null;
+        @Nullable Function<Class<? extends M>, String> moduleConfigBlockHeaderSupplier = null;
+        String moduleConfigSectionKey = "modules";
+        @Nullable String moduleSectionHeader = null;
+        ObjectMapperFactory objectMapperFactory = DefaultObjectMapperFactory.getInstance();
 
         protected abstract T getThis();
 
@@ -786,23 +736,6 @@ public abstract class ModuleHolder<M extends Module, D extends M> {
          */
         public T setConfigurationLoader(ConfigurationLoader<? extends ConfigurationNode> configurationLoader) {
             this.configurationLoader = configurationLoader;
-            return getThis();
-        }
-
-        /**
-         * Sets a {@link Function} that takes the loader's {@link ConfigurationOptions}, transforms it, and applies it
-         * to nodes when they are loaded.
-         *
-         * <p>
-         *     By default, just uses the {@link ConfigurationOptions} of the loader.
-         * </p>
-         *
-         * @param optionsTransformer The transformer
-         * @return This {@link Builder} for chaining.
-         */
-        public T setConfigurationOptionsTransformer(Function<ConfigurationOptions, ConfigurationOptions> optionsTransformer) {
-            Preconditions.checkNotNull(optionsTransformer);
-            this.configurationOptionsTransformer = optionsTransformer;
             return getThis();
         }
 
@@ -840,19 +773,12 @@ public abstract class ModuleHolder<M extends Module, D extends M> {
         }
 
         /**
-         * Sets whether {@link TypedAbstractConfigAdapter} {@link ConfigSerializable} fields that have the annotation {@link NoMergeIfPresent}
-         * will <em>not</em> be merged into existing config values.
-         *
-         * @param noMergeIfPresent <code>true</code> if fields should be skipped if they are already populated.
-         * @return This {@link Builder}, for chaining.
-         */
-        public T setNoMergeIfPresent(boolean noMergeIfPresent) {
-            this.doNotMerge = noMergeIfPresent;
-            return getThis();
-        }
-
-        /**
          * Sets the function that is used to set the description for each module in the configuration file.
+         *
+         * <p>
+         *     The function accepts a module ID, returns a description which may be empty, but most
+         *     not be <code>null</code>.
+         * </p>
          *
          * <p>
          *     This is displayed above each of the module toggles in the configuration file.
@@ -861,8 +787,8 @@ public abstract class ModuleHolder<M extends Module, D extends M> {
          * @param handler The {@link Function} to use, or {@code null} otherwise.
          * @return This {@link Builder}, for chaining.
          */
-        public T setModuleDescriptionHandler(@Nullable Function<Class<? extends M>, String> handler) {
-            this.moduleDescriptionHandler = handler;
+        public T setModuleSectionPerModuleDescriptionSupplier(@Nullable Function<String, String> handler) {
+            this.moduleSectionPerModuleDescriptionSupplier = handler;
             return getThis();
         }
 
@@ -876,8 +802,8 @@ public abstract class ModuleHolder<M extends Module, D extends M> {
          * @param header The {@link Function} to use, or {@code null} otherwise.
          * @return This {@link Builder}, for chaining.
          */
-        public T setModuleConfigurationHeader(@Nullable Function<M, String> header) {
-            this.moduleConfigurationHeader = header;
+        public T setModuleConfigBlockHeaderSupplier(@Nullable Function<Class<? extends M>, String> header) {
+            this.moduleConfigBlockHeaderSupplier = header;
             return getThis();
         }
 
@@ -889,7 +815,7 @@ public abstract class ModuleHolder<M extends Module, D extends M> {
          */
         public T setModuleConfigSectionName(String name) {
             Preconditions.checkNotNull(name);
-            this.moduleConfigSection = name;
+            this.moduleConfigSectionKey = name;
             return getThis();
         }
 
@@ -900,7 +826,7 @@ public abstract class ModuleHolder<M extends Module, D extends M> {
          * @return This {@link Builder}, for chaining.
          */
         public T setModuleConfigSectionDescription(@Nullable String description) {
-            this.moduleDescription = description;
+            this.moduleSectionHeader = description;
             return getThis();
         }
 
@@ -915,9 +841,23 @@ public abstract class ModuleHolder<M extends Module, D extends M> {
             return getThis();
         }
 
+        /**
+         * Sets the {@link ObjectMapperFactory} to use when creating configuration
+         * objects.
+         *
+         * <p>Default is {@link DefaultObjectMapperFactory#getInstance()}</p>
+         *
+         * @param factory The factory to use
+         * @return This {@link Builder}, for chaning
+         */
+        public T setObjectMapperFactory(ObjectMapperFactory factory) {
+            this.objectMapperFactory = Preconditions.checkNotNull(factory);
+            return getThis();
+        }
+
         protected void checkBuild() {
             Preconditions.checkNotNull(configurationLoader);
-            Preconditions.checkNotNull(moduleConfigSection);
+            Preconditions.checkNotNull(moduleConfigSectionKey);
             Preconditions.checkNotNull(enabler);
 
             if (loggerProxy == null) {

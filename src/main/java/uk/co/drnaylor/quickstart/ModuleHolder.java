@@ -5,6 +5,7 @@
 package uk.co.drnaylor.quickstart;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
@@ -30,6 +31,7 @@ import uk.co.drnaylor.quickstart.loaders.PhasedModuleEnabler;
 
 import java.io.IOException;
 import java.text.MessageFormat;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -144,7 +146,7 @@ public abstract class ModuleHolder<M extends Module, D extends M> {
         try {
             this.baseClass = builder.moduleType;
             this.disableableClass = builder.disableableClass;
-            this.config = new SystemConfig<>(builder.configurationLoader, builder.loggerProxy, builder.configurationOptionsTransformer);
+            this.config = new SystemConfig<>(builder.configurationLoader, builder.loggerProxy, builder.configurationOptionsTransformer, ImmutableList.copyOf(builder.transformations));
             this.loggerProxy = builder.loggerProxy;
             this.enabler = builder.enabler;
             this.requireAnnotation = builder.requireAnnotation;
@@ -743,6 +745,7 @@ public abstract class ModuleHolder<M extends Module, D extends M> {
         ConfigurationLoader<? extends ConfigurationNode> configurationLoader;
         boolean requireAnnotation = false;
         LoggerProxy loggerProxy;
+        final List<AbstractConfigAdapter.Transformation> transformations = new ArrayList<>();
         Function<ConfigurationOptions, ConfigurationOptions> configurationOptionsTransformer = x -> x;
         boolean doNotMerge = false;
         @Nullable Function<Class<? extends M>, String> moduleDescriptionHandler = null;
@@ -886,6 +889,19 @@ public abstract class ModuleHolder<M extends Module, D extends M> {
          */
         public T setModuleConfigSectionDescription(@Nullable String description) {
             this.moduleDescription = description;
+            return getThis();
+        }
+
+        /**
+         * Tells the system how to transform the entire configuration before it
+         * is loaded. Multiple transformations can be performed by chaining this
+         * method.
+         *
+         * @param transformation The transformation to apply.
+         * @return This {@link Builder}, for chaining.
+         */
+        public T transformConfig(AbstractConfigAdapter.Transformation transformation) {
+            this.transformations.add(transformation);
             return getThis();
         }
 

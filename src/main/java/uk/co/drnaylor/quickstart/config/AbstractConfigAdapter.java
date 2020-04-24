@@ -252,7 +252,7 @@ public abstract class AbstractConfigAdapter<R> {
     /**
      * Represents a transformation to be made to the configuration BEFORE it is completely loaded.
      */
-    protected static final class Transformation {
+    public static final class Transformation {
         private final Object[] objectPath;
         private final TransformAction action;
 

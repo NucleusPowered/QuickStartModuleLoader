@@ -5,6 +5,7 @@
 package uk.co.drnaylor.quickstart.config;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -17,6 +18,7 @@ import ninja.leaping.configurate.objectmapping.ObjectMappingException;
 import ninja.leaping.configurate.objectmapping.Setting;
 import ninja.leaping.configurate.objectmapping.serialize.ConfigSerializable;
 import ninja.leaping.configurate.transformation.ConfigurationTransformation;
+import ninja.leaping.configurate.transformation.MoveStrategy;
 import uk.co.drnaylor.quickstart.exceptions.IncorrectAdapterTypeException;
 import uk.co.drnaylor.quickstart.exceptions.NoModuleException;
 
@@ -37,6 +39,7 @@ import javax.annotation.Nullable;
  */
 public class AbstractAdaptableConfig<N extends ConfigurationNode> {
 
+    private final ImmutableList<AbstractConfigAdapter.Transformation> transformations;
     private Map<String, AbstractConfigAdapter<?>> moduleConfigAdapters = Maps.newHashMap();
 
     private final ConfigurationLoader<N> loader;
@@ -45,18 +48,26 @@ public class AbstractAdaptableConfig<N extends ConfigurationNode> {
     private final Function<ConfigurationOptions, ConfigurationOptions> optionsTransformer;
 
     public AbstractAdaptableConfig(ConfigurationLoader<N> loader) throws IOException {
-        this(loader, loader::createEmptyNode, x -> x);
+        this(loader, loader::createEmptyNode, x -> x, ImmutableList.of());
     }
 
     public AbstractAdaptableConfig(ConfigurationLoader<N> loader,
             Supplier<ConfigurationNode> nodeCreator,
             Function<ConfigurationOptions, ConfigurationOptions> optionsTransformer) throws IOException {
+        this(loader, nodeCreator, optionsTransformer, ImmutableList.of());
+    }
+
+    public AbstractAdaptableConfig(ConfigurationLoader<N> loader,
+            Supplier<ConfigurationNode> nodeCreator,
+            Function<ConfigurationOptions, ConfigurationOptions> optionsTransformer,
+            List<AbstractConfigAdapter.Transformation> transformations) throws IOException {
         Preconditions.checkNotNull(loader);
         Preconditions.checkNotNull(nodeCreator);
 
         this.loader = loader;
         this.nodeCreator = nodeCreator;
         this.optionsTransformer = optionsTransformer;
+        this.transformations = ImmutableList.copyOf(transformations);
         load();
     }
 
@@ -72,6 +83,11 @@ public class AbstractAdaptableConfig<N extends ConfigurationNode> {
      */
     public void load() throws IOException {
         this.node = loader.load(optionsTransformer.apply(loader.getDefaultOptions()));
+        if (!this.transformations.isEmpty()) {
+            final ConfigurationTransformation.Builder transformation = ConfigurationTransformation.builder();
+            this.transformations.forEach(x -> transformation.addAction(x.getObjectPath(), x.getAction()));
+            transformation.setMoveStrategy(MoveStrategy.MERGE).build().apply(this.node);
+        }
     }
 
     /**

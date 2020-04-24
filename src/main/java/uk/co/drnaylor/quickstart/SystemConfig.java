@@ -31,8 +31,9 @@ public final class SystemConfig<N extends ConfigurationNode, M extends Module> e
 
     SystemConfig(ConfigurationLoader<N> loader,
             LoggerProxy proxy,
-            Function<ConfigurationOptions, ConfigurationOptions> optionsTransformer) throws IOException {
-        super(loader, () -> loader.createEmptyNode(optionsTransformer.apply(loader.getDefaultOptions())), optionsTransformer);
+            Function<ConfigurationOptions, ConfigurationOptions> optionsTransformer,
+            List<AbstractConfigAdapter.Transformation> transformations) throws IOException {
+        super(loader, () -> loader.createEmptyNode(optionsTransformer.apply(loader.getDefaultOptions())), optionsTransformer, transformations);
         this.proxy = proxy;
     }
 

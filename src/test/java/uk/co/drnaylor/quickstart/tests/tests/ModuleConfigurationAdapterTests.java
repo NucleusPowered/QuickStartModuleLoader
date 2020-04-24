@@ -4,6 +4,7 @@
  */
 package uk.co.drnaylor.quickstart.tests.tests;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Maps;
 import ninja.leaping.configurate.ConfigurationNode;
 import ninja.leaping.configurate.ConfigurationOptions;
@@ -37,7 +38,8 @@ public class ModuleConfigurationAdapterTests extends FakeLoaderTests {
         config = (SystemConfig<ConfigurationNode, Module>) ctor.newInstance(
                 loader,
                 DefaultLogger.INSTANCE,
-                (Function<ConfigurationOptions, ConfigurationOptions>) configurationOptions -> configurationOptions);
+                (Function<ConfigurationOptions, ConfigurationOptions>) configurationOptions -> configurationOptions,
+                ImmutableList.of());
 
     }
 

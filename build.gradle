@@ -10,7 +10,7 @@ plugins {
 ext.url = 'http://qsml.dualspiral.co.uk'
 
 group 'uk.co.drnaylor'
-version '0.12.0-SNAPSHOT'
+version '0.12.0'
 
 defaultTasks 'licenseFormat'
 

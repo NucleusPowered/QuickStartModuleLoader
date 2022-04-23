@@ -6,7 +6,8 @@ name: Build and Publish
 on:
   push:
     branches:
-      - v3
+      - master
+      - main
 
 jobs:
   build:

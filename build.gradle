@@ -1,13 +1,13 @@
 plugins {
-    id 'java'
+    id 'java-library'
     id 'idea'
     id 'eclipse'
     id 'com.github.hierynomus.license' version '0.12.1'
     id 'ninja.miserable.blossom' version '1.0.1'
-    id 'maven'
+    id 'maven-publish'
 }
 
-ext.url = 'http://qsml.dualspiral.co.uk'
+ext.url = 'https://qsml.dualspiral.co.uk'
 
 group 'uk.co.drnaylor'
 version '0.12.1-SNAPSHOT'
@@ -18,24 +18,16 @@ sourceCompatibility = 1.8
 targetCompatibility = 1.8
 
 repositories {
-    jcenter()
-    maven {
-        name 'drnaylor'
-        url 'http://repo.drnaylor.co.uk/artifactory/list/quickstart'
-    }
-    maven {
-        name 'sponge'
-        url 'https://repo.spongepowered.org/maven/'
-    }
+    mavenCentral()
 }
 
 dependencies {
-    compile "org.spongepowered:configurate-core:3.6.1"
-    compile group: 'com.google.code.findbugs', name: 'jsr305', version: '3.0.2'
-    testCompile "org.spongepowered:configurate-gson:3.6.1"
+    api "org.spongepowered:configurate-core:3.7.1"
+    implementation group: 'com.google.code.findbugs', name: 'jsr305', version: '3.0.2'
+    testImplementation "org.spongepowered:configurate-gson:3.7.1"
 
-    testCompile "junit:junit:4.12"
-    testCompile "org.mockito:mockito-core:1.10.19"
+    testImplementation 'junit:junit:4.13.2'
+    testImplementation "org.mockito:mockito-core:1.10.19"
 }
 
 license {
@@ -69,18 +61,18 @@ blossom {
 jar {
     manifest {
         attributes  'Implementation-Title': project.name,
-                'Implementation-Version': version,
+                'Implementation-Version': archiveVersion,
                 'Git-Hash': getGitHash()
     }
 }
 
 task sourcesJar(type: Jar, dependsOn: classes) {
-    classifier = 'sources'
+    archiveClassifier.set('sources')
     from sourceSets.main.allSource
 }
 
 task javadocJar(type: Jar, dependsOn: javadoc) {
-    classifier = 'javadoc'
+    archiveClassifier.set('javadoc')
     from javadoc.destinationDir
 }
 
@@ -89,8 +81,36 @@ artifacts {
     archives javadocJar
 }
 
-def private String getGitHash() {
+private String getGitHash() {
     def process = 'git rev-parse --short HEAD'.execute();
     process.waitFor();
     return process.exitValue() ? 'unknown' : process.text.trim();
+}
+
+publishing {
+    repositories {
+        def githubToken = System.getenv("GITHUB_TOKEN")
+        if (githubToken != null) {
+            maven {
+                name = "GitHubPackages"
+                url = project.uri(project.property("ghUri") + project.property("ghSlug"))
+                credentials {
+                    username = System.getenv("GITHUB_ACTOR")
+                    password = githubToken
+                }
+            }
+        }
+
+        def artifactoryToken = System.getenv("ARTIFACTORY_TOKEN")
+        if (artifactoryToken != null) {
+            maven {
+                name = "Artifactory"
+                url = project.uri(System.getenv("ARTIFACTORY_URL"))
+                credentials {
+                    username = System.getenv("ARTIFACTORY_USER")
+                    password = artifactoryToken
+                }
+            }
+        }
+    }
 }

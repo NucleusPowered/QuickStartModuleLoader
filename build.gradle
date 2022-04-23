@@ -10,6 +10,7 @@ plugins {
 ext.url = 'https://qsml.dualspiral.co.uk'
 
 group 'uk.co.drnaylor'
+def artifactName = 'quickstart-moduleloader'
 version '0.12.1-SNAPSHOT'
 
 defaultTasks 'licenseFormat'
@@ -88,6 +89,16 @@ private String getGitHash() {
 }
 
 publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            from components.java
+
+            groupId = group
+            artifactId = artifactName
+            version = version
+        }
+    }
+
     repositories {
         def githubToken = System.getenv("GITHUB_TOKEN")
         if (githubToken != null) {
